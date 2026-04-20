@@ -1,0 +1,1 @@
+Agent-based modeling (ABM) of migrants represented as cognitive agents rather than utility-maximizers or passive reactors to external forces, this approach brings psychological perspectives to computational migration research and enables exploration of migration dynamics beyond traditional approaches. CSS 635 Cognitive Foundations
