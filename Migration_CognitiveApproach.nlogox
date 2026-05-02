@@ -3,8 +3,13 @@
   <code><![CDATA[;; ==========================================================
 ;; MIGRATION AS COGNITIVE GAP (Carling & Schewel, 2018)
 ;; ==========================================================
-;; Lydia Teinfalt for CSS 635   04/20/2026
+;; Lydia Teinfalt for CSS 635   Last Updated: 5/1/2026
 
+globals [
+  flow-to-trapped   ;; Count agents becoming Involuntary Non-Migrants
+  flow-to-migrant   ;; Count agents becoming Voluntary Migrants
+  total-migrations  ;; Total migrated
+]
 
 turtles-own [
   ;; --- ASPIRATIONS (Scale 0 - 10) ---
@@ -14,12 +19,8 @@ turtles-own [
   asp-family      ; Love & Belonging / Join family or friends
   asp-adventure   ; Self-actualization / New experiences
   total-aspiration 
-  
-  next-asp-safety
-  next-asp-quality
-  next-asp-economic
-  next-asp-family
-  next-asp-adventure 
+  aspiration
+  next-aspiration
   ability-growth-potential
 
   
@@ -34,7 +35,7 @@ turtles-own [
   
   ;; --- STATE ---
   previous-status    ; The actual current state
-  migration-status  ; "voluntary-migrant", "involuntary-migrant", "involuntary-non-migrant", "voluntary-non-migrant"
+  migration-status  ; "voluntary-migrant", "acquiescent-migrant", "involuntary-non-migrant", "voluntary-non-migrant"
 ]
 
 ;; ==========================================================
@@ -87,6 +88,8 @@ to setup-turtles
     set ability-growth-potential (random-float 1.5 + 0.5) 
     
     ;; Initialize Aspirations
+    set aspiration (asp-min + random-float (asp-max - asp-min))
+    set next-aspiration (asp-min + random-float (asp-max - asp-min))
     set asp-safety (asp-min + random-float (asp-max - asp-min))
     set asp-quality (asp-min + random-float (asp-max - asp-min))
     set asp-economic (asp-min + random-float (asp-max - asp-min))
@@ -100,6 +103,15 @@ to setup-turtles
     set abil-social (abil-min + random-float (abil-max - abil-min))
     set abil-info (abil-min + random-float (abil-max - abil-min))
     set abil-family (abil-min + random-float (abil-max - abil-min))
+    
+    ;; Only link to turtles within 3 patches
+    let network-friends other turtles in-radius 1.5
+    if any? network-friends [
+      ;; Create a link with only 2 or less nearby turtles
+      create-links-with n-of (min list 2 count network-friends) network-friends [
+        set color grey
+      ]
+    ]
     
     recalculate-metrics
     determine-status
@@ -119,18 +131,27 @@ to go
   increase-ability
     
   ask turtles [
+
+    set aspiration next-aspiration
+
     recalculate-metrics
     determine-status
     migrate
   ]
+  update-link-visibility 
 
   tick
+end
+to update-link-visibility
+  ifelse show-links
+    [ ask links [ show-link ] ] 
+    [ ask links [ hide-link ] ]
 end
 
 to determine-status
   ifelse total-aspiration > 5 [
     
-    ;; ASPIRATION IS HIGH
+    ;; RIGHT SIDE: HIGH ASPIRATION
     ifelse total-ability > 5 [
       set migration-status "voluntary-migrant"         ;; High aspiration, high ability
       set color green
@@ -141,30 +162,45 @@ to determine-status
     
   ] [
    
-    ;; ASPIRATION IS LOW
+    ;; LEFT SIDE: LOW ASPIRATION
+    
     ifelse total-ability > 5 [
-      set migration-status "voluntary-non-migrant"     ;; Content to stay, high ability
-      set color cyan 
+      set migration-status "voluntary-non-migrant" ;; Content agents Low aspiration
+      set color cyan     
     ] [
-      set migration-status "involuntary-migrant"       ;; Neither want to move nor can move (Acquiescent)
-      set color yellow  
+      set migration-status "acquiescent-non-migrant"   ;; Resigned: Low potential, no desire
+      set color yellow            ;; Slight shade shift if you want a hint of difference
     ]
   ]
   
+  if previous-status != migration-status [
+    if migration-status = "involuntary-non-migrant" [ 
+      set flow-to-trapped flow-to-trapped + 1 
+    ]
+    if migration-status = "voluntary-migrant" [ 
+      set flow-to-migrant flow-to-migrant + 1
+      set total-migrations total-migrations + 1 ;; Cumulative counter
+    ]
+  ]
 
 end
 
 to recalculate-metrics
   ;; Maslow's logic
   ifelse asp-safety >= 5 [
-    set total-aspiration mean (list asp-safety asp-quality asp-economic asp-family asp-adventure) ]
+    ;;total-aspiration is the average of the 5 internal needs + the 1 socialized drive
+    ;;set total-aspiration mean (list asp-safety asp-quality asp-economic asp-family asp-adventure aspiration)]
+    ;; 70% internal dimensions, 30% social network influence
+    set total-aspiration (0.7 * mean (list asp-safety asp-quality asp-economic asp-family asp-adventure)) + (0.3 * aspiration)]
     [set total-aspiration asp-safety ]
+
   
   ;; Mixed ability logic (min to represent bottleneck (20%) and mean = compensating factors (80%))
   let my-abilities (list abil-financial abil-legal abil-human abil-social abil-info abil-family)
   
   ;; Giving less weight to the lower bounds of abilities dimensions and more weight (80%) to the average as a compensating control
   set total-ability (0.2 * min (my-abilities)) + (0.8 * mean(my-abilities))
+  
 end
 
 to migrate
@@ -197,76 +233,62 @@ end
 ;; ==========================================================
 
 to update-aspiration-socially
-;; Asynchronous updates. Modeling the influence of interacting with peers
-  ask turtles [
-  let local-peers turtles-on neighbors   
-    if any? local-peers [ 
-      let positive-influence count local-peers with [asp-economic > 5]
-      let negative-influence count local-peers with [asp-economic < 5]
-      
-      ;; Calculate the next state based on social influence
-      let net-change (positive-influence - negative-influence) * 0.05
-      set next-asp-economic (asp-economic + net-change)
+  ;; 1. Calculate the macro-level impact (Global Diaspora Signal)
+  let total-pop count turtles
+  let diaspora-signal 0
+  if total-pop > 0 [
+    set diaspora-signal (count turtles with [migration-status = "voluntary-migrant"] / total-pop)
+  ]
   
-      if next-asp-economic > 10 [ set next-asp-economic 10 ]
-      if next-asp-economic < 1 [ set next-asp-economic 1 ]
+  ask turtles [
+    ;; global diaspora influence
+    let diaspora-pull (diaspora-signal * 0.1)
+    
+    ;; Meso networks
+    let my-network link-neighbors 
+    let migrated-friends count my-network with [migration-status = "voluntary-migrant"]
+    
+    ;; Use the slider to weight the direct impact of migrated friends
+    let net-boost (migrated-friends * network-strength) 
+
+    ifelse any? my-network [
+      ;; Peer pressure: seeing if friends have high vs low total aspirations
+      let peer-weight (network-strength * 0.1) 
+      let positive-influence count my-network with [aspiration > 5]
+      let negative-influence count my-network with [aspiration < 5]
       
-      set positive-influence count local-peers with [asp-safety > 5]
-      set negative-influence count local-peers with [asp-safety < 5]
-      
-      set next-asp-safety (asp-economic + net-change)
-      if next-asp-safety > 10 [ set next-asp-safety 10 ]
-      if next-asp-safety < 1 [ set next-asp-safety 1 ]
-      
-      set positive-influence count local-peers with [asp-quality > 5]
-      set negative-influence count local-peers with [asp-quality < 5]
-      set next-asp-quality (asp-quality + net-change)
-      if next-asp-quality > 10 [ set next-asp-quality 10 ]
-      if next-asp-quality < 1 [ set next-asp-quality 1 ]
-      
-      set positive-influence count local-peers with [asp-family > 5]
-      set negative-influence count local-peers with [asp-family < 5]
-      set next-asp-family (asp-family + net-change)
-      if next-asp-family > 10 [ set next-asp-family 10 ]
-      if next-asp-family < 1 [ set next-asp-family 1 ]
-      
-      set positive-influence count local-peers with [asp-adventure > 5]
-      set negative-influence count local-peers with [asp-adventure < 5]
-      set next-asp-adventure (asp-adventure + net-change)
-      if next-asp-adventure > 10 [ set next-asp-adventure 10 ]
-      if next-asp-adventure < 1 [ set next-asp-adventure 1 ]
-      
+      ;; Combine local peer pressure, the global signal, and the specific network boost
+      let total-change ((positive-influence - negative-influence) * peer-weight) + diaspora-pull + net-boost
+      set next-aspiration (aspiration + total-change)
+    ] 
+    [
+      ;; If isolated, only the global signal influences them
+      set next-aspiration (aspiration + diaspora-pull)
     ]
+
+    ;; 2. Bound values between 1 and 10
+    set next-aspiration median (list 1 next-aspiration 10)
+    
   ]
 end
 
 to increase-ability
   ask turtles [
-    ;; Simulate slow growth in human capital (learning) 
-    let learning-rate 0.01 * (1 - abil-human / 10)
-    set abil-human min (list 10 (abil-human + learning-rate))
+    ;; Simulate slow growth in human capital (learning)
+    ;; and financial capital (savings)
+    let random-luck random-float 0.01
+    set abil-human (abil-human + 0.004)
+    set abil-financial (abil-financial + (random-luck * ability-growth-potential))
+    ifelse migration-status = "involuntary-non-migrant" or migration-status = "acquiescent-non-migrant" [
+      ;; Involuntary mobile povery trap
+      set abil-financial (abil-financial - 0.005)] 
+    [set abil-financial (abil-financial + 0.005)]
     
-    ;; Social Capital
-    let local-peers turtles-on neighbors 
-    let network-effect 0
-    if any? local-peers [ 
-      set abil-social min (list 10 (abil-social + 0.003))
-      set network-effect mean [abil-financial] of local-peers
-    ]
-    
-    ;; Cost of being trapped or compelled to leave is greater for these involuntary migrants
-    ifelse migration-status = "involuntary-non-migrant" or migration-status = "involuntary-migrant" 
-      ;; The "Trap" logic: Savings are spent on survival, not growth
-      [ set abil-financial max (list 0 (abil-financial - 0.001))]
-      ;; Not trapped 
-      [
-      let growth (random-float 0.01 * ability-growth-potential)
-      let network-boost (network-effect - abil-financial) * 0.02
-      set abil-financial min (list 10 (abil-financial + growth + network-boost))
-      ]
-      
-      if abil-financial < 0 [ set abil-financial 0 ]
-  ]
+    ;; Cap values at 10 to stay within your scale
+    if abil-human > 10 [ set abil-human 10 ]
+    if abil-financial > 10 [ set abil-financial 10 ]
+]
+
 end
 
 
@@ -277,10 +299,15 @@ to apply-economic-shock
     let shock-magnitude (11 - abil-financial) * 0.3
     set asp-economic min (list 10 (asp-economic + 2 + random-float 3))
     
+    
     ;; Despite increase in aspiration, ability to migrate is negatively impacted by economic downturn
     set abil-financial max (list 0 (abil-financial - shock-magnitude))
-    
-    set abil-human max (list 0 (abil-human - random-float 0.5))
+    set abil-human max (list 0 (abil-human - shock-magnitude))
+    set abil-social max (list 0 (abil-social - shock-magnitude))
+    set abil-info max (list 0 (abil-info - shock-magnitude))
+    set abil-legal max (list 0 (abil-legal - shock-magnitude)) 
+    set abil-family max (list 0 (abil-family - shock-magnitude))
+      
   
     recalculate-metrics
     determine-status
@@ -290,7 +317,7 @@ end
 
 to apply-shock-border-closure
   ;; Simulate a sudden policy change restricting legal migration for everyone
-  ask turtles [
+  ask turtles with [migration-status = "voluntary-migrant"] [
     ;; Legal ability plummets (Bounded to a minimum of 0)
     set abil-legal (abil-legal - 5 - random-float 3)
     if abil-legal < 0 [ set abil-legal 0 ]
@@ -311,7 +338,7 @@ to apply-shock-deportation
     set abil-legal (abil-legal - 5 - random-float 3)
     if abil-legal < 0 [ set abil-legal 0 ]
     
-    if migration-status = "involuntary-non-migrant" or migration-status = "involuntary-migrant" 
+    if migration-status = "involuntary-non-migrant" or migration-status = "acquiescent-non-migrant" 
       ;; The "Trap" logic: Savings are spent on survival, not growth
       [ set abil-financial (abil-financial - 0.004) ]
 
@@ -327,50 +354,57 @@ end
 
 ]]></code>
   <widgets>
-    <view x="333" wrappingAllowedX="false" y="23" frameRate="30.0" minPycor="-10" height="418" showTickCounter="true" patchSize="19.7143" fontSize="10" wrappingAllowedY="false" width="418" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
-    <button x="112" y="33" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="72" display="STEP">GO</button>
-    <button x="205" y="34" height="49" disableUntilTicks="false" forever="true" kind="Observer" width="72">GO</button>
-    <chooser x="167" y="286" height="60" variable="initial-ability-level" current="0" width="137" display="initial-ability-level">
+    <view x="311" wrappingAllowedX="false" y="86" frameRate="30.0" minPycor="-10" height="449" showTickCounter="true" patchSize="21.2" fontSize="10" wrappingAllowedY="false" width="449" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
+    <note x="503" y="440" backgroundDark="0" fontSize="12" width="106" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Low Abiity</note>
+    <button x="3" y="418" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="152" display="Economic Downturn">apply-economic-shock</button>
+    <note x="3" y="392" backgroundDark="0" fontSize="12" width="150" markdown="false" height="28" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCKS</note>
+    <input x="182" multiline="false" y="94" height="64" variable="global-seed" type="number" width="116">108.0</input>
+    <button x="109" y="32" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="95" display="STEP">GO</button>
+    <button x="208" y="32" height="49" disableUntilTicks="false" forever="true" kind="Observer" width="90">GO</button>
+    <switch x="181" y="165" height="40" on="true" variable="show-links" width="117" display="show-links"></switch>
+    <slider x="3" step="0.1" y="312" max="1" width="150" display="network-strength" height="60" min="0" direction="Horizontal" default="0.5" variable="network-strength"></slider>
+    <chooser x="3" y="241" height="60" variable="initial-ability-level" current="0" width="149" display="initial-ability-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
-    <chooser x="168" y="218" height="60" variable="initial-aspiration-level" current="1" width="137" display="initial-aspiration-level">
+    <chooser x="3" y="168" height="60" variable="initial-aspiration-level" current="0" width="149" display="initial-aspiration-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
-    <button x="19" y="32" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="72">SETUP</button>
-    <note x="309" y="138" backgroundDark="0" fontSize="12" width="26" markdown="false" height="236" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">L
-o
-w
-
-A
-s
-p
-i
-r
-a
-t
-i
-o
-n</note>
-    <note x="749" y="122" backgroundDark="0" fontSize="12" width="31" markdown="false" height="252" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">H
-i
-g
-h
-
-A
-s
-p
-i
-r
-a
-t
-i
-o
-n</note>
-    <plot x="813" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Number of Agents" y="19" xMin="0.0" height="209" legend="true" xMax="10.0" yMin="0.0" width="224" xAxis="Time" display="Population Demographics">
+    <input x="4" multiline="false" y="97" height="60" variable="num-turtles" type="number" width="149">200.0</input>
+    <monitor x="181" precision="17" y="222" height="60" fontSize="11" width="100">total-migrations</monitor>
+    <button x="3" y="31" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="101">SETUP</button>
+    <note x="158" y="320" backgroundDark="0" fontSize="12" width="139" markdown="false" height="149" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Green: Seeker
+Red: Trapped
+Cyan: Conten
+Yellow: Acquiescent</note>
+    <plot x="1192" autoPlotX="true" yMax="10.0" autoPlotY="true" y="0" xMin="0.0" height="266" legend="true" xMax="10.0" yMin="0.0" width="315" display="Low Aspiration Population Composition">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="1" display="Acquiescent" color="-1184463" legend="true">
+        <setup></setup>
+        <update>plot count turtles with [color = yellow]</update>
+      </pen>
+      <pen interval="1.0" mode="1" display="Trapped" color="-2674135" legend="true">
+        <setup></setup>
+        <update>plot count turtles with [color = red]</update>
+      </pen>
+    </plot>
+    <plot x="1197" autoPlotX="true" yMax="10.0" autoPlotY="true" y="264" xMin="0.0" height="283" legend="true" xMax="10.0" yMin="0.0" width="324" display="High Aspiration Population Composition">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="1" display="Content" color="-11221820" legend="true">
+        <setup></setup>
+        <update>plot count turtles with [color = cyan]</update>
+      </pen>
+      <pen interval="1.0" mode="1" display="Seeker" color="-10899396" legend="true">
+        <setup></setup>
+        <update>plot count turtles with [color = green]</update>
+      </pen>
+    </plot>
+    <plot x="806" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Number of Agents" y="3" xMin="0.0" height="183" legend="true" xMax="10.0" yMin="0.0" width="395" xAxis="Time" display="Population Demographics">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="0" display="Content" color="-12345184" legend="true">
@@ -390,7 +424,23 @@ n</note>
         <update>plot count turtles with [color = red]</update>
       </pen>
     </plot>
-    <plot x="809" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Frequency" y="250" xMin="-10.0" height="175" legend="false" xMax="10.0" yMin="0.0" width="230" xAxis="Aspiration-Ability" display="Aspiration-Ability Gap Distribution">
+    <plot x="802" autoPlotX="true" yMax="10.0" autoPlotY="true" y="190" xMin="0.0" height="188" legend="true" xMax="10.0" yMin="0.0" width="405" display="Mean Aspiration vs Ability">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="Mean Aspiration" color="-5825686" legend="true">
+        <setup></setup>
+        <update>plot mean [total-aspiration] of turtles</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="Mean Ability" color="-13345367" legend="true">
+        <setup></setup>
+        <update>plot mean [total-ability] of turtles</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="Gap" color="-955883" legend="true">
+        <setup></setup>
+        <update>plot (mean [total-aspiration] of turtles - mean [total-ability] of turtles)</update>
+      </pen>
+    </plot>
+    <plot x="798" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Frequency" y="381" xMin="-10.0" height="164" legend="false" xMax="10.0" yMin="0.0" width="407" xAxis="Aspiration-Ability" display="Aspiration-Ability Gap Distribution">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="1" display="gap" color="-2674135" legend="true">
@@ -410,34 +460,45 @@ plot-pen-up</update>
 </update>
       </pen>
     </plot>
-    <note x="500" y="0" backgroundDark="0" fontSize="12" width="106" markdown="false" height="20" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">High Ability</note>
-    <note x="503" y="440" backgroundDark="0" fontSize="12" width="106" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Low Abiity</note>
-    <note x="423" y="459" backgroundDark="0" fontSize="12" width="364" markdown="false" height="67" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Green: voluntary-migrant (Opportunity Seeker)
-Red: involuntary-non-migrant (Trapped)
-Cyan: voluntary-non-migrant (Content)
-Yellow: involuntary-migrant (Acquiescent)</note>
-    <button x="19" y="316" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="104" display="Deportation">apply-shock-deportation</button>
-    <button x="19" y="260" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="109" display="Borders Closures">apply-shock-border-closure</button>
-    <button x="19" y="210" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="116" display="Economic Decline">apply-economic-shock</button>
-    <note x="13" y="170" backgroundDark="0" fontSize="12" width="150" markdown="false" height="28" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCKS</note>
-    <input x="18" multiline="false" y="97" height="60" variable="num-turtles" type="number" width="131">200.0</input>
-    <input x="165" multiline="false" y="96" height="62" variable="global-seed" type="number" width="105">42.0</input>
-    <plot x="1070" autoPlotX="true" yMax="10.0" autoPlotY="true" y="28" xMin="0.0" height="175" legend="false" xMax="10.0" yMin="0.0" width="230" display="Aspiration Distribution">
-      <setup></setup>
-      <update></update>
-      <pen interval="1.0" mode="1" display="Aspiration" color="-15390905" legend="true">
-        <setup></setup>
-        <update>histogram [total-aspiration] of turtles</update>
-      </pen>
-    </plot>
-  </widgets>
-  <info>## WHAT IS IT?
+    <note x="756" y="223" backgroundDark="0" fontSize="12" width="31" markdown="false" height="252" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">H
+i
+g
+h
 
-(a general understanding of what the model is trying to show or explain)
+A
+s
+p
+i
+r
+a
+t
+i
+o
+n</note>
+    <note x="487" y="63" backgroundDark="0" fontSize="12" width="106" markdown="false" height="20" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">High Ability</note>
+    <note x="318" y="12" backgroundDark="0" fontSize="12" width="399" markdown="false" height="67" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Title: Integrating Cognition to Migration Models
+Author: Lydia Teinfalt
+CSS 635: Congitive Foundations
+Last Updated: 5/1/2026</note>
+  </widgets>
+  <info><![CDATA[## WHAT IS IT?
+
+An agent-based exploration of the Aspiration-Capability Framework in migration studies based on the works of Carling & Schewel (2018). Instead of reducing complex migration decisions to either optimization calculations or structural determinism, the model explores the psychological and sociological drivers of human mobility. Migration requires both the aspiration to move and the means to do so and this model specifically investigates how the "gap" between an individual's aspiration to move and their perceived ability shapes migratory status.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+In the simulation, agents ("turtles") are placed into four distinct behavioral quadrants based on two axes:
+
+-Vertical Axis: Ability (High vs. Low)
+-Horizontal Axis: Aspiration (High vs. Low)
+
+Ability are the capabilities required to move
+Aspiration represents the desire to migrate
+
+*Green* (Voluntary Migrant): Wants to move and can move (High Aspiration, High Ability)
+*Red* (Involuntary Non-Migrant): Wants to move but is trapped by lack of resources (High Aspiration, Low Ability)
+*Blue* (Voluntary non-Migrant): Is content to stay but has the means to move (Low Aspiration, High or Low Ability)
+*Yellow* (Involuntary Migrants): Does not want to move but is compelled to leave
 
 ## HOW TO USE IT
 
@@ -466,7 +527,7 @@ Yellow: involuntary-migrant (Acquiescent)</note>
 ## CREDITS AND REFERENCES
 
 (a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
-</info>
+]]></info>
   <turtleShapes>
     <shape name="default" rotatable="true" editableColorIndex="0">
       <polygon color="-1920102913" filled="true" marked="true">
