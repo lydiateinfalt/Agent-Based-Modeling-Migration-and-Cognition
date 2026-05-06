@@ -315,38 +315,38 @@ to apply-economic-shock
   ]
 end
 
-to apply-shock-border-closure
-  ;; Simulate a sudden policy change restricting legal migration for everyone
-  ask turtles with [migration-status = "voluntary-migrant"] [
-    ;; Legal ability plummets (Bounded to a minimum of 0)
-    set abil-legal (abil-legal - 5 - random-float 3)
-    if abil-legal < 0 [ set abil-legal 0 ]
+; to apply-shock-border-closure
+;   ;; Simulate a sudden policy change restricting legal migration for everyone
+;   ask turtles with [migration-status = "voluntary-migrant"] [
+;     ;; Legal ability plummets (Bounded to a minimum of 0)
+;     set abil-legal (abil-legal - 5 - random-float 3)
+;     if abil-legal < 0 [ set abil-legal 0 ]
     
-    recalculate-metrics
-    determine-status
-    update-agent-position
-  ]
-end
+;     recalculate-metrics
+;     determine-status
+;     update-agent-position
+;   ]
+; end
 
-to apply-shock-deportation
-  ask turtles [
-    ; High intensity shock to safety
-    set asp-safety (asp-safety - 5 - random-float 2)
-    if asp-safety < 0 [ set asp-safety 0 ]
+; to apply-shock-deportation
+;   ask turtles [
+;     ; High intensity shock to safety
+;     set asp-safety (asp-safety - 5 - random-float 2)
+;     if asp-safety < 0 [ set asp-safety 0 ]
     
-    ; high intensity shock to legal ability
-    set abil-legal (abil-legal - 5 - random-float 3)
-    if abil-legal < 0 [ set abil-legal 0 ]
+;     ; high intensity shock to legal ability
+;     set abil-legal (abil-legal - 5 - random-float 3)
+;     if abil-legal < 0 [ set abil-legal 0 ]
     
-    if migration-status = "involuntary-non-migrant" or migration-status = "acquiescent-non-migrant" 
-      ;; The "Trap" logic: Savings are spent on survival, not growth
-      [ set abil-financial (abil-financial - 0.004) ]
+;     if migration-status = "involuntary-non-migrant" or migration-status = "acquiescent-non-migrant" 
+;       ;; The "Trap" logic: Savings are spent on survival, not growth
+;       [ set abil-financial (abil-financial - 0.004) ]
 
-    recalculate-metrics
-    determine-status
-    update-agent-position
-  ]
-end
+;     recalculate-metrics
+;     determine-status
+;     update-agent-position
+;   ]
+; end
 
 
 
@@ -479,7 +479,7 @@ n</note>
     <note x="318" y="12" backgroundDark="0" fontSize="12" width="399" markdown="false" height="67" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Title: Integrating Cognition to Migration Models
 Author: Lydia Teinfalt
 CSS 635: Congitive Foundations
-Last Updated: 5/1/2026</note>
+Last Updated: 5/5/2026</note>
   </widgets>
   <info><![CDATA[## WHAT IS IT?
 
