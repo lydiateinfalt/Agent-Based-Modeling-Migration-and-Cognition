@@ -183,7 +183,7 @@ to determine-status
     if migration-status = "involuntary-non-migrant" [ 
       set flow-to-trapped flow-to-trapped + 1 
     ]
-    if migration-status = "voluntary-migrant" [ 
+    if migration-status = "voluntary-migrant" or migration-status = "distressed-migrant" [ 
       set flow-to-migrant flow-to-migrant + 1
       set total-migrations total-migrations + 1 ;; Cumulative counter
     ]
@@ -275,16 +275,35 @@ to update-aspiration-socially
 end
 
 to increase-ability
+  let drag-probability 0.5  ;; 50% chance of experiencing financial drag each tick
+  let drag-amount 0.008     ;; Amount of financial depletion
   ask turtles [
     ;; Simulate slow growth in human capital (learning)
     ;; and financial capital (savings)
     let random-luck random-float 0.01
     set abil-human (abil-human + 0.004)
-    set abil-financial (abil-financial + (random-luck * ability-growth-potential))
-    ifelse migration-status = "involuntary-non-migrant" or migration-status = "acquiescent-non-migrant" or migration-status = "distressed-migrant"[
+    ;set abil-financial (abil-financial + (random-luck * ability-growth-potential))
+    ;ifelse migration-status = "involuntary-non-migrant" or migration-status = "acquiescent-non-migrant" or migration-status = "distressed-migrant"[
       ;; Involuntary mobile povery trap
-      set abil-financial (abil-financial - 0.005)] 
-    [set abil-financial (abil-financial + 0.005)]
+    ;  set abil-financial (abil-financial - 0.005)] 
+    ;[set abil-financial (abil-financial + 0.005)]
+    
+    ;; Conditional financial dynamics
+    ifelse member? migration-status ["involuntary-non-migrant" "acquiescent-non-migrant" "distressed-migrant"] [
+      
+      ;; POVERTY TRAP DRAG (Stochastic)
+      ;; Applies financial depletion randomly based on drag-probability
+      ifelse (random-float 1.0 < drag-probability) [
+        set abil-financial (abil-financial - drag-amount)
+      ] [
+        ;; Slight positive accumulation when spared from drag
+        set abil-financial (abil-financial + (random-luck * ability-growth-potential))
+      ]
+      
+    ] [
+      ;; ACCUMULATION: Voluntary non-migrants & seekers experience steady savings growth
+      set abil-financial (abil-financial + (random-luck * ability-growth-potential))
+    ]
     
     ;; Cap values at 10 to stay within your scale
     if abil-human > 10 [ set abil-human 10 ]
@@ -346,32 +365,82 @@ to-report cumulative-migrations
   report total-migrations
 end
 
+to-report mean-aspiration-level
+  ifelse any? turtles [
+    report mean [total-aspiration] of turtles
+  ] [
+    report 0
+  ]
+end
+
+to-report mean-ability-level
+  ifelse any? turtles [
+    report mean [total-ability] of turtles
+  ] [
+    report 0
+  ]
+end
+
+to-report mean-aspiration-ability-gap
+  ifelse any? turtles [
+    report (mean-aspiration-level - mean-ability-level)
+  ] [
+    report 0
+  ]
+end
+
 
 
 
 ]]></code>
   <widgets>
-    <view x="325" wrappingAllowedX="false" y="37" frameRate="30.0" minPycor="-10" height="408" showTickCounter="true" patchSize="19.24" fontSize="10" wrappingAllowedY="false" width="408" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
-    <button x="14" y="11" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="72">SETUP</button>
-    <button x="92" y="11" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="70" display="STEP">GO</button>
-    <button x="168" y="10" height="37" disableUntilTicks="false" forever="true" kind="Observer" width="68">GO</button>
+    <view x="324" wrappingAllowedX="false" y="29" frameRate="30.0" minPycor="-10" height="417" showTickCounter="true" patchSize="19.7" fontSize="10" wrappingAllowedY="false" width="417" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
     <input x="107" multiline="false" y="55" height="60" variable="global-seed" type="number" width="100">42.0</input>
-    <switch x="209" y="53" height="40" on="true" variable="show-links" width="98" display="show-links"></switch>
-    <monitor x="209" precision="17" y="99" height="60" fontSize="11" width="100">total-migrations</monitor>
     <chooser x="9" y="119" height="60" variable="initial-aspiration-level" current="0" width="100" display="initial-aspiration-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
     <input x="6" multiline="false" y="57" height="60" variable="num-turtles" type="number" width="100">200.0</input>
-    <chooser x="113" y="117" height="61" variable="initial-ability-level" current="0" width="104" display="initial-ability-level">
+    <slider x="6" step="0.1" y="185" max="1" width="150" display="network-strength" height="50" min="0" direction="Horizontal" default="0.4" variable="network-strength"></slider>
+    <note x="3" y="244" backgroundDark="0" fontSize="12" width="143" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCKS</note>
+    <button x="0" y="268" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="152" display="Economic Downturn">apply-economic-shock</button>
+    <note x="362" y="455" backgroundDark="0" fontSize="12" width="304" markdown="false" height="67" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Title: Integrating Cognition to Migration Models
+Author: Lydia Teinfalt
+CSS 635: Congitive Foundations
+Last Updated: 8/20/2026</note>
+    <note x="165" y="216" backgroundDark="0" fontSize="12" width="178" markdown="false" height="95" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Green: Seeker
+Red: Trapped
+Cyan: Content
+Yellow: Acquiescent
+Orange: Distressed</note>
+    <plot x="1246" autoPlotX="true" yMax="10.0" autoPlotY="true" y="0" xMin="0.0" height="220" legend="true" xMax="10.0" yMin="0.0" width="288" display="Mean Aspiration vs Ability">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="Mean Aspiration" color="-5825686" legend="true">
+        <setup></setup>
+        <update>plot mean-aspiration-level</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="Mean Ability" color="-13345367" legend="true">
+        <setup></setup>
+        <update>plot mean-ability-level</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="Gap" color="-1513240" legend="true">
+        <setup></setup>
+        <update>plot mean-aspiration-ability-gap</update>
+      </pen>
+    </plot>
+    <chooser x="113" y="117" height="60" variable="initial-ability-level" current="0" width="100" display="initial-ability-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
-    <slider x="6" step="0.1" y="185" max="1" width="150" display="network-strength" height="50" min="0" direction="Horizontal" default="0.2" variable="network-strength"></slider>
-    <note x="497" y="9" backgroundDark="0" fontSize="12" width="106" markdown="false" height="25" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">High Ability</note>
-    <note x="292" y="169" backgroundDark="0" fontSize="12" width="31" markdown="false" height="252" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">L
+    <monitor x="215" precision="17" y="54" height="61" fontSize="11" width="106">total-migrations</monitor>
+    <button x="83" y="10" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="70" display="STEP">GO</button>
+    <button x="157" y="8" height="37" disableUntilTicks="false" forever="true" kind="Observer" width="64">GO</button>
+    <switch x="225" y="6" height="40" on="true" variable="show-links" width="95" display="show-links"></switch>
+    <note x="488" y="0" backgroundDark="0" fontSize="12" width="106" markdown="false" height="25" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">High Ability</note>
+    <note x="303" y="159" backgroundDark="0" fontSize="12" width="31" markdown="false" height="252" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">L
 o
 w
 
@@ -385,38 +454,15 @@ t
 i
 o
 n</note>
-    <note x="3" y="244" backgroundDark="0" fontSize="12" width="143" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCKS</note>
-    <button x="0" y="268" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="152" display="Economic Downturn">apply-economic-shock</button>
-    <note x="362" y="455" backgroundDark="0" fontSize="12" width="304" markdown="false" height="67" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Title: Integrating Cognition to Migration Models
-Author: Lydia Teinfalt
-CSS 635: Congitive Foundations
-Last Updated: 8/20/2026</note>
-    <plot x="744" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Frequency" y="383" xMin="-10.0" height="164" legend="false" xMax="10.0" yMin="0.0" width="374" xAxis="Aspiration-Ability" display="Aspiration-Ability Gap Distribution">
+    <plot x="746" autoPlotX="true" yMax="10.0" autoPlotY="true" y="5" xMin="0.0" height="175" legend="false" xMax="10000.0" yMin="0.0" width="230" xAxis="ticks" display="Cumulative Migration Flow">
       <setup></setup>
       <update></update>
-      <pen interval="1.0" mode="1" display="gap" color="-2674135" legend="true">
+      <pen interval="1.0" mode="0" display="migration totals" color="-16777216" legend="true">
         <setup></setup>
-        <update>histogram [(total-aspiration - total-ability)] of turtles</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="zero-line" color="-16777216" legend="true">
-        <setup></setup>
-        <update>plot-pen-down
-plotxy 0 0
-plotxy 0 plot-y-max
-plot-pen-up</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="line" color="-16777216" legend="true">
-        <setup></setup>
-        <update>histogram [(total-aspiration - total-ability)] of turtles
-</update>
+        <update>plot cumulative-migrations</update>
       </pen>
     </plot>
-    <note x="165" y="216" backgroundDark="0" fontSize="12" width="178" markdown="false" height="95" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Green: Seeker
-Red: Trapped
-Cyan: Content
-Yellow: Acquiescent
-Orange: Distressed</note>
-    <plot x="0" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Score (Ratio 0-10)" y="327" xMin="0.0" height="183" legend="true" xMax="2000.0" yMin="0.0" width="216" xAxis="Ticks" display="Diaspora vs Aspiration Evolution">
+    <plot x="988" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Score (Ratio 0-10)" y="3" xMin="0.0" height="178" legend="true" xMax="2000.0" yMin="0.0" width="217" xAxis="Ticks" display="Avg Aspiration and Diaspora Signal">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="0" display="Avg Aspiration" color="-5825686" legend="true">
@@ -428,23 +474,7 @@ Orange: Distressed</note>
         <update>plot (diaspora-signal-reporter * 10)</update>
       </pen>
     </plot>
-    <plot x="1246" autoPlotX="true" yMax="10.0" autoPlotY="true" y="0" xMin="0.0" height="220" legend="true" xMax="10.0" yMin="0.0" width="288" display="Mean Aspiration vs Ability">
-      <setup></setup>
-      <update></update>
-      <pen interval="1.0" mode="0" display="Mean Aspiration" color="-5825686" legend="true">
-        <setup></setup>
-        <update>plot mean [total-aspiration] of turtles</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="Mean Ability" color="-13345367" legend="true">
-        <setup></setup>
-        <update>plot mean [total-ability] of turtles</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="Gap" color="-955883" legend="true">
-        <setup></setup>
-        <update>plot (mean [total-aspiration] of turtles - mean [total-ability] of turtles)</update>
-      </pen>
-    </plot>
-    <plot x="747" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Number of Agents" y="0" xMin="0.0" height="286" legend="true" xMax="10.0" yMin="0.0" width="344" xAxis="Time" display="Population Demographics">
+    <plot x="1140" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Number of Agents" y="248" xMin="0.0" height="286" legend="true" xMax="10.0" yMin="0.0" width="344" xAxis="Time" display="Population Demographics">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="0" display="Content" color="-12345184" legend="true">
@@ -468,6 +498,27 @@ Orange: Distressed</note>
         <update>plot count turtles with [color = orange]</update>
       </pen>
     </plot>
+    <plot x="760" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Frequency" y="285" xMin="-10.0" height="244" legend="false" xMax="10.0" yMin="0.0" width="378" xAxis="Aspiration-Ability" display="Aspiration-Ability Gap Distribution">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="1" display="gap" color="-2674135" legend="true">
+        <setup></setup>
+        <update>histogram [(total-aspiration - total-ability)] of turtles</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="zero-line" color="-16777216" legend="true">
+        <setup></setup>
+        <update>plot-pen-down
+plotxy 0 0
+plotxy 0 plot-y-max
+plot-pen-up</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="line" color="-16777216" legend="true">
+        <setup></setup>
+        <update>histogram [(total-aspiration - total-ability)] of turtles
+</update>
+      </pen>
+    </plot>
+    <button x="6" y="10" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="72">SETUP</button>
   </widgets>
   <info><![CDATA[## WHAT IS IT?
 
