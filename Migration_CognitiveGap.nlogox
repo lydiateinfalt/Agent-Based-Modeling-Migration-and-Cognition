@@ -183,7 +183,8 @@ to determine-status
     if migration-status = "involuntary-non-migrant" [ 
       set flow-to-trapped flow-to-trapped + 1 
     ]
-    if migration-status = "voluntary-migrant" or migration-status = "distressed-migrant" [ 
+    if member? migration-status ["voluntary-migrant" "distressed-migrant"] 
+    and not member? previous-status ["voluntary-migrant" "distressed-migrant"] [
       set flow-to-migrant flow-to-migrant + 1
       set total-migrations total-migrations + 1 ;; Cumulative counter
     ]
@@ -207,16 +208,12 @@ end
 
 to migrate
   ;; Agents jitter slightly to look alive, but stay in their conceptual area
-  right random 360
-  forward random-float 0.1
   let scale-x ((max-pxcor - 0.5) / 5)
   let scale-y ((max-pycor - 0.5) / 5)
-  
-  let true-x (total-aspiration - 5) * scale-x
-  let true-y (total-ability - 5) * scale-y
-  
+  let true-x median (list min-pxcor ((total-aspiration - 5) * scale-x) max-pxcor)
+  let true-y median (list min-pycor ((total-ability - 5) * scale-y) max-pycor)
   facexy true-x true-y
-  if distancexy true-x true-y > 0.1 [ forward 0.05 ]
+  if distancexy true-x true-y > 0.1 [ forward min (list 0.2 distancexy true-x true-y) ]
 end
 
 to update-agent-position
@@ -239,7 +236,7 @@ to update-aspiration-socially
   let total-pop count turtles
   let diaspora-signal 0
   if total-pop > 0 [
-    set diaspora-signal (count turtles with [migration-status = "voluntary-migrant"] / total-pop)
+    set diaspora-signal (count turtles with [migration-status = "voluntary-migrant" or migration-status = "distressed-migrant"] / total-pop)
   ]
   
   ask turtles [
@@ -1460,4 +1457,113 @@ Aspiration represents the desire to migrate
     </shape>
   </linkShapes>
   <previewCommands>setup repeat 75 [ go ]</previewCommands>
+  <experiments>
+    <experiment name="Experiment 3" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="9866">
+      <setup>setup</setup>
+      <go>go</go>
+      <metrics>
+        <metric>count turtles</metric>
+        <metric>count turtles with [color = cyan]</metric>
+        <metric>count turtles with [color = green]</metric>
+        <metric>count turtles with [color = yellow]</metric>
+        <metric>count turtles with [color = red]</metric>
+        <metric>count turtles with [color = orange]</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>mean-aspiration-ability-gap</metric>
+        <metric>cumulative-migrations</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;Low&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="true"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;High&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="global-seed">
+          <value value="42"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+    <experiment name="Experiment 2" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="1584">
+      <setup>setup</setup>
+      <go>go if ticks = 794 [ apply-economic-shock ]</go>
+      <metrics>
+        <metric>count turtles</metric>
+        <metric>count turtles with [color = cyan]</metric>
+        <metric>count turtles with [color = green]</metric>
+        <metric>count turtles with [color = yellow]</metric>
+        <metric>count turtles with [color = red]</metric>
+        <metric>count turtles with [color = orange]</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>mean-aspiration-ability-gap</metric>
+        <metric>cumulative-migrations</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="true"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="global-seed">
+          <value value="42"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+    <experiment name="Experiment 1" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="1584">
+      <setup>setup</setup>
+      <metrics>
+        <metric>count turtles</metric>
+        <metric>count turtles with [color = cyan]</metric>
+        <metric>count turtles with [color = green]</metric>
+        <metric>count turtles with [color = yellow]</metric>
+        <metric>count turtles with [color = red]</metric>
+        <metric>count turtles with [color = orange]</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>mean-aspiration-ability-gap</metric>
+        <metric>cumulative-migrations</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="true"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="global-seed">
+          <value value="42"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+  </experiments>
 </model>
