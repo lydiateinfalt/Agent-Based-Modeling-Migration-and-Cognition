@@ -1529,6 +1529,8 @@ Aspiration represents the desire to migrate
         </enumeratedValueSet>
         <enumeratedValueSet variable="global-seed">
           <value value="42"></value>
+          <value value="108"></value>
+          <value value="777"></value>
         </enumeratedValueSet>
       </constants>
     </experiment>
@@ -1565,6 +1567,8 @@ Aspiration represents the desire to migrate
         </enumeratedValueSet>
         <enumeratedValueSet variable="global-seed">
           <value value="42"></value>
+          <value value="108"></value>
+          <value value="777"></value>
         </enumeratedValueSet>
       </constants>
     </experiment>
