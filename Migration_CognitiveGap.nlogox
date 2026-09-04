@@ -291,7 +291,7 @@ to increase-ability
       ;; POVERTY TRAP DRAG (Stochastic)
       ;; Applies financial depletion randomly based on drag-probability
       ifelse (random-float 1.0 < drag-probability) [
-        set abil-financial (abil-financial - drag-amount)
+        set abil-financial max(list 0 (abil-financial - drag-amount))
       ] [
         ;; Slight positive accumulation when spared from drag
         set abil-financial (abil-financial + (random-luck * ability-growth-potential))
@@ -393,7 +393,7 @@ end
   <widgets>
     <view x="324" wrappingAllowedX="false" y="29" frameRate="30.0" minPycor="-10" height="417" showTickCounter="true" patchSize="19.7" fontSize="10" wrappingAllowedY="false" width="417" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
     <input x="107" multiline="false" y="55" height="60" variable="global-seed" type="number" width="100">42.0</input>
-    <chooser x="9" y="119" height="60" variable="initial-aspiration-level" current="0" width="100" display="initial-aspiration-level">
+    <chooser x="9" y="119" height="60" variable="initial-aspiration-level" current="1" width="100" display="initial-aspiration-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
@@ -427,7 +427,7 @@ Orange: Distressed</note>
         <update>plot mean-aspiration-ability-gap</update>
       </pen>
     </plot>
-    <chooser x="113" y="117" height="60" variable="initial-ability-level" current="0" width="100" display="initial-ability-level">
+    <chooser x="113" y="117" height="60" variable="initial-ability-level" current="2" width="100" display="initial-ability-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
@@ -1491,6 +1491,8 @@ Aspiration represents the desire to migrate
         </enumeratedValueSet>
         <enumeratedValueSet variable="global-seed">
           <value value="42"></value>
+          <value value="108"></value>
+          <value value="777"></value>
         </enumeratedValueSet>
       </constants>
     </experiment>
@@ -1532,6 +1534,7 @@ Aspiration represents the desire to migrate
     </experiment>
     <experiment name="Experiment 1" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="1584">
       <setup>setup</setup>
+      <go>go</go>
       <metrics>
         <metric>count turtles</metric>
         <metric>count turtles with [color = cyan]</metric>
