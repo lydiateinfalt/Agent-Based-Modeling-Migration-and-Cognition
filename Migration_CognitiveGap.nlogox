@@ -3,7 +3,7 @@
   <code><![CDATA[;; ==========================================================
 ;; MIGRATION AS COGNITIVE GAP (Carling & Schewel, 2018)
 ;; ==========================================================
-;; Lydia Teinfalt for CSS 635   Last Updated: 8/20/2026
+;; Lydia Teinfalt for CSS 635   Last Updated: 9/25/2026
 
 globals [
   flow-to-trapped   ;; Count agents becoming Involuntary Non-Migrants
@@ -19,8 +19,8 @@ turtles-own [
   asp-family      ; Love & Belonging / Join family or friends
   asp-adventure   ; Self-actualization / New experiences
   total-aspiration 
-  aspiration
-  next-aspiration
+  asp-social
+  next-asp-social
   ability-growth-potential
 
   
@@ -88,8 +88,8 @@ to setup-turtles
     set ability-growth-potential (random-float 1.5 + 0.5) 
     
     ;; Initialize Aspirations
-    set aspiration (asp-min + random-float (asp-max - asp-min))
-    set next-aspiration (asp-min + random-float (asp-max - asp-min))
+    set asp-social (asp-min + random-float (asp-max - asp-min))
+    set next-asp-social (asp-min + random-float (asp-max - asp-min))
     set asp-safety (asp-min + random-float (asp-max - asp-min))
     set asp-quality (asp-min + random-float (asp-max - asp-min))
     set asp-economic (asp-min + random-float (asp-max - asp-min))
@@ -132,7 +132,7 @@ to go
     
   ask turtles [
 
-    set aspiration next-aspiration
+    ;set aspiration next-aspiration
 
     recalculate-metrics
     determine-status
@@ -178,13 +178,14 @@ to determine-status
       set color yellow            ;; Slight shade shift if you want a hint of difference
     ]
   ]
-  
+ 
   if previous-status != migration-status [
     if migration-status = "involuntary-non-migrant" [ 
       set flow-to-trapped flow-to-trapped + 1 
     ]
     if member? migration-status ["voluntary-migrant" "distressed-migrant"] 
     and not member? previous-status ["voluntary-migrant" "distressed-migrant"] [
+       ;; Look at this section - still needed? Identifical
       set flow-to-migrant flow-to-migrant + 1
       set total-migrations total-migrations + 1 ;; Cumulative counter
     ]
@@ -195,7 +196,7 @@ end
 
 to recalculate-metrics
   let internal-aspirations (list asp-quality asp-economic asp-family asp-adventure)
-  let high-order-asp (0.7 * mean internal-aspirations) + (0.3 * aspiration)
+  let high-order-asp (0.7 * mean internal-aspirations) + (0.3 * asp-social)
   set total-aspiration max(list asp-safety high-order-asp)
   
   ;; Mixed ability logic (min to represent bottleneck (20%) and mean = compensating factors (80%))
@@ -212,6 +213,7 @@ to migrate
   let scale-y ((max-pycor - 0.5) / 5)
   let true-x median (list min-pxcor ((total-aspiration - 5) * scale-x) max-pxcor)
   let true-y median (list min-pycor ((total-ability - 5) * scale-y) max-pycor)
+  ;; setxy
   facexy true-x true-y
   if distancexy true-x true-y > 0.1 [ forward min (list 0.2 distancexy true-x true-y) ]
 end
@@ -253,21 +255,21 @@ to update-aspiration-socially
     ifelse any? my-network [
       ;; Peer pressure: seeing if friends have high vs low total aspirations
       let peer-weight (network-strength * 0.1) 
-      let positive-influence count my-network with [aspiration >= 5]
-      let negative-influence count my-network with [aspiration < 5]
+      let positive-influence count my-network with [asp-social >= 5]
+      let negative-influence count my-network with [asp-social < 5]
       
       ;; Combine local peer pressure, the global signal, and the specific network boost
       let total-change ((positive-influence - negative-influence) * peer-weight) + diaspora-pull + net-boost
-      set next-aspiration (aspiration + total-change)
+      set next-asp-social (asp-social + total-change)
     ] 
     [
       ;; If isolated, only the global signal influences them
-      set next-aspiration (aspiration + diaspora-pull)
+      set next-asp-social (asp-social + diaspora-pull)
     ]
 
     ;; 2. Bound values between 1 and 10
-    set next-aspiration median (list 1 next-aspiration 10)
-    
+    set next-asp-social median (list 1 next-asp-social 10)
+    set asp-social next-asp-social
   ]
 end
 
@@ -338,14 +340,6 @@ end
 ;; INTERFACE REPORTERS
 ;; ==========================================================
 
-;; Reporter 1: Population-Mean Total Aspiration
-to-report mean-total-aspiration
-  ifelse any? turtles [
-    report mean [total-aspiration] of turtles
-  ] [
-    report 0
-  ]
-end
 
 ;; Reporter 2: Global Diaspora Signal (Proportion of population that migrated)
 to-report diaspora-signal-reporter
@@ -391,26 +385,16 @@ end
 
 ]]></code>
   <widgets>
-    <view x="324" wrappingAllowedX="false" y="29" frameRate="30.0" minPycor="-10" height="417" showTickCounter="true" patchSize="19.7" fontSize="10" wrappingAllowedY="false" width="417" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
+    <view x="250" wrappingAllowedX="false" y="17" frameRate="30.0" minPycor="-10" height="504" showTickCounter="true" patchSize="23.81" fontSize="10" wrappingAllowedY="false" width="504" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
     <input x="107" multiline="false" y="55" height="60" variable="global-seed" type="number" width="100">42.0</input>
-    <chooser x="9" y="119" height="60" variable="initial-aspiration-level" current="1" width="100" display="initial-aspiration-level">
+    <chooser x="9" y="119" height="60" variable="initial-aspiration-level" current="0" width="100" display="initial-aspiration-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
     <input x="6" multiline="false" y="57" height="60" variable="num-turtles" type="number" width="100">200.0</input>
     <slider x="6" step="0.1" y="185" max="1" width="150" display="network-strength" height="50" min="0" direction="Horizontal" default="0.4" variable="network-strength"></slider>
-    <note x="3" y="244" backgroundDark="0" fontSize="12" width="143" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCKS</note>
     <button x="0" y="268" height="49" disableUntilTicks="false" forever="false" kind="Observer" width="152" display="Economic Downturn">apply-economic-shock</button>
-    <note x="362" y="455" backgroundDark="0" fontSize="12" width="304" markdown="false" height="67" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Title: Integrating Cognition to Migration Models
-Author: Lydia Teinfalt
-CSS 635: Congitive Foundations
-Last Updated: 8/20/2026</note>
-    <note x="165" y="216" backgroundDark="0" fontSize="12" width="178" markdown="false" height="95" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Green: Seeker
-Red: Trapped
-Cyan: Content
-Yellow: Acquiescent
-Orange: Distressed</note>
     <plot x="1246" autoPlotX="true" yMax="10.0" autoPlotY="true" y="0" xMin="0.0" height="220" legend="true" xMax="10.0" yMin="0.0" width="288" display="Mean Aspiration vs Ability">
       <setup></setup>
       <update></update>
@@ -427,31 +411,38 @@ Orange: Distressed</note>
         <update>plot mean-aspiration-ability-gap</update>
       </pen>
     </plot>
-    <chooser x="113" y="117" height="60" variable="initial-ability-level" current="2" width="100" display="initial-ability-level">
+    <chooser x="113" y="117" height="60" variable="initial-ability-level" current="0" width="100" display="initial-ability-level">
       <choice type="string" value="All"></choice>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
-    <monitor x="215" precision="17" y="54" height="61" fontSize="11" width="106">total-migrations</monitor>
     <button x="83" y="10" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="70" display="STEP">GO</button>
+    <note x="3" y="244" backgroundDark="0" fontSize="12" width="143" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCKS</note>
+    <monitor x="0" precision="17" y="323" height="61" fontSize="11" width="106">total-migrations</monitor>
+    <switch x="111" y="322" height="40" on="true" variable="show-links" width="95" display="show-links"></switch>
+    <note x="7" y="384" backgroundDark="0" fontSize="12" width="241" markdown="false" height="67" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Title: Integrating Cognition to Migration Models
+Author: Lydia Teinfalt
+CSS 635: Congitive Foundations
+Last Updated: 9/25/2026</note>
+    <note x="9" y="451" backgroundDark="0" fontSize="12" width="240" markdown="false" height="83" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Green: Voluntary migrant
+Red: Involuntary non-migrant
+Cyan: Voluntary non-migrant
+Yellow: Acquiescent migrant
+Orange: Distressed/Forced migrant</note>
     <button x="157" y="8" height="37" disableUntilTicks="false" forever="true" kind="Observer" width="64">GO</button>
-    <switch x="225" y="6" height="40" on="true" variable="show-links" width="95" display="show-links"></switch>
-    <note x="488" y="0" backgroundDark="0" fontSize="12" width="106" markdown="false" height="25" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">High Ability</note>
-    <note x="303" y="159" backgroundDark="0" fontSize="12" width="31" markdown="false" height="252" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">L
-o
-w
-
-A
-s
-p
-i
-r
-a
-t
-i
-o
-n</note>
-    <plot x="746" autoPlotX="true" yMax="10.0" autoPlotY="true" y="5" xMin="0.0" height="175" legend="false" xMax="10000.0" yMin="0.0" width="230" xAxis="ticks" display="Cumulative Migration Flow">
+    <plot x="996" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Score (Ratio 0-10)" y="4" xMin="0.0" height="211" legend="true" xMax="2000.0" yMin="0.0" width="247" xAxis="Ticks" display="Avg Aspiration and Diaspora Signal">
+      <setup></setup>
+      <update></update>
+      <pen interval="1.0" mode="0" display="Avg Aspiration" color="-5825686" legend="true">
+        <setup></setup>
+        <update>plot mean-aspiration-level</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="Diaspora Signal" color="-13345367" legend="true">
+        <setup></setup>
+        <update>plot (diaspora-signal-reporter * 10)</update>
+      </pen>
+    </plot>
+    <plot x="756" autoPlotX="true" yMax="10.0" autoPlotY="true" y="5" xMin="0.0" height="187" legend="false" xMax="10000.0" yMin="0.0" width="235" xAxis="ticks" display="Cumulative Migration Flow">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="0" display="migration totals" color="-16777216" legend="true">
@@ -459,19 +450,8 @@ n</note>
         <update>plot cumulative-migrations</update>
       </pen>
     </plot>
-    <plot x="988" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Score (Ratio 0-10)" y="3" xMin="0.0" height="178" legend="true" xMax="2000.0" yMin="0.0" width="217" xAxis="Ticks" display="Avg Aspiration and Diaspora Signal">
-      <setup></setup>
-      <update></update>
-      <pen interval="1.0" mode="0" display="Avg Aspiration" color="-5825686" legend="true">
-        <setup></setup>
-        <update>plot mean-total-aspiration</update>
-      </pen>
-      <pen interval="1.0" mode="0" display="Diaspora Signal" color="-13345367" legend="true">
-        <setup></setup>
-        <update>plot (diaspora-signal-reporter * 10)</update>
-      </pen>
-    </plot>
-    <plot x="1140" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Number of Agents" y="248" xMin="0.0" height="286" legend="true" xMax="10.0" yMin="0.0" width="344" xAxis="Time" display="Population Demographics">
+    <note x="247" y="258" backgroundDark="0" fontSize="12" width="127" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Low Aspiration</note>
+    <plot x="1180" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Number of Agents" y="244" xMin="0.0" height="286" legend="true" xMax="10.0" yMin="0.0" width="344" xAxis="Time" display="Population Demographics">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="0" display="Content" color="-12345184" legend="true">
@@ -495,7 +475,7 @@ n</note>
         <update>plot count turtles with [color = orange]</update>
       </pen>
     </plot>
-    <plot x="760" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Frequency" y="285" xMin="-10.0" height="244" legend="false" xMax="10.0" yMin="0.0" width="378" xAxis="Aspiration-Ability" display="Aspiration-Ability Gap Distribution">
+    <plot x="775" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Frequency" y="246" xMin="-10.0" height="281" legend="false" xMax="10.0" yMin="0.0" width="373" xAxis="Aspiration-Ability" display="Aspiration-Ability Gap Distribution">
       <setup></setup>
       <update></update>
       <pen interval="1.0" mode="1" display="gap" color="-2674135" legend="true">
@@ -515,7 +495,7 @@ plot-pen-up</update>
 </update>
       </pen>
     </plot>
-    <button x="6" y="10" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="72">SETUP</button>
+    <button x="6" y="11" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="72">SETUP</button>
   </widgets>
   <info><![CDATA[## WHAT IS IT?
 
