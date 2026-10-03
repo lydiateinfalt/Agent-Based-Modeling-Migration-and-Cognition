@@ -506,11 +506,6 @@ plot-pen-up</update>
         <update>plot count turtles with [color = orange]</update>
       </pen>
     </plot>
-    <note x="252" y="400" backgroundDark="0" fontSize="12" width="240" markdown="false" height="83" textColorDark="-12895429" textColorLight="-16777216" backgroundLight="0">Green: Voluntary migrant
-Red: Involuntary non-migrant
-Cyan: Voluntary non-migrant
-Yellow: Acquiescent migrant
-Orange: Distressed/Forced migrant</note>
     <button x="5" y="8" height="35" disableUntilTicks="false" forever="false" kind="Observer" width="72">SETUP</button>
     <input x="111" multiline="false" y="50" height="60" variable="global-seed" type="number" width="100">42.0</input>
     <input x="5" multiline="false" y="50" height="60" variable="num-turtles" type="number" width="100">200.0</input>
@@ -539,6 +534,11 @@ Orange: Distressed/Forced migrant</note>
     <note x="247" y="496" backgroundDark="0" fontSize="12" width="143" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCK</note>
     <monitor x="2" precision="17" y="311" height="60" fontSize="11" width="100" display="Vol Migrant">count turtles with [color = green]</monitor>
     <note x="407" y="532" backgroundDark="0" fontSize="12" width="260" markdown="false" height="20" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Migration as Cognitive Gap (Teinfalt, 2026)</note>
+    <note x="252" y="400" backgroundDark="0" fontSize="12" width="240" markdown="false" height="83" textColorDark="-12895429" textColorLight="-16777216" backgroundLight="0">Green: Voluntary migrant
+Red: Involuntary non-migrant
+Cyan: Voluntary non-migrant
+Yellow: Acquiescent non-migrant
+Orange: Distressed/Forced migrant</note>
   </widgets>
   <info><![CDATA[## WHAT IS IT?
 
