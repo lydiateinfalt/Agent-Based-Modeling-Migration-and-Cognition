@@ -422,7 +422,7 @@ end
 
 ]]></code>
   <widgets>
-    <view x="250" wrappingAllowedX="false" y="17" frameRate="30.0" minPycor="-10" height="467" showTickCounter="true" patchSize="22.05" fontSize="10" wrappingAllowedY="false" width="467" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
+    <view x="257" wrappingAllowedX="false" y="17" frameRate="30.0" minPycor="-10" height="467" showTickCounter="true" patchSize="22.05" fontSize="10" wrappingAllowedY="false" width="467" tickCounterLabel="ticks" maxPycor="10" updateMode="0" maxPxcor="10" minPxcor="-10"></view>
     <plot x="1246" autoPlotX="true" yMax="10.0" autoPlotY="true" y="0" xMin="0.0" height="220" legend="true" xMax="10.0" yMin="0.0" width="288" display="Mean Aspiration vs Ability">
       <setup></setup>
       <update></update>
@@ -461,7 +461,6 @@ end
         <update>plot cumulative-migrations</update>
       </pen>
     </plot>
-    <note x="247" y="258" backgroundDark="0" fontSize="12" width="127" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Low Aspiration</note>
     <plot x="775" autoPlotX="true" yMax="10.0" autoPlotY="true" yAxis="Frequency" y="246" xMin="-10.0" height="281" legend="false" xMax="10.0" yMin="0.0" width="373" xAxis="Aspiration-Ability" display="Aspiration-Ability Gap Distribution">
       <setup></setup>
       <update></update>
@@ -521,7 +520,6 @@ plot-pen-up</update>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
-    <switch x="167" y="175" height="40" on="true" variable="show-links" width="69" display="show-links"></switch>
     <monitor x="2" precision="17" y="239" height="61" fontSize="11" width="106">total-migrations</monitor>
     <monitor x="116" precision="17" y="239" height="60" fontSize="11" width="100" display="Vol non-migrant">count turtles with [color = cyan]</monitor>
     <monitor x="112" precision="17" y="311" height="60" fontSize="11" width="100" display="Invol non-migrant">count turtles with [color = red]</monitor>
@@ -534,11 +532,43 @@ plot-pen-up</update>
     <note x="247" y="496" backgroundDark="0" fontSize="12" width="143" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCK</note>
     <monitor x="2" precision="17" y="311" height="60" fontSize="11" width="100" display="Vol Migrant">count turtles with [color = green]</monitor>
     <note x="407" y="532" backgroundDark="0" fontSize="12" width="260" markdown="false" height="20" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Migration as Cognitive Gap (Teinfalt, 2026)</note>
-    <note x="252" y="400" backgroundDark="0" fontSize="12" width="240" markdown="false" height="83" textColorDark="-12895429" textColorLight="-16777216" backgroundLight="0">Green: Voluntary migrant
+    <switch x="167" y="174" height="40" on="true" variable="show-links" width="69" display="show-links"></switch>
+    <note x="444" y="482" backgroundDark="0" fontSize="12" width="127" markdown="false" height="28" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Low Ability</note>
+    <note x="453" y="0" backgroundDark="0" fontSize="12" width="127" markdown="false" height="28" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">High Ability</note>
+    <note x="259" y="400" backgroundDark="0" fontSize="12" width="240" markdown="false" height="83" textColorDark="-12895429" textColorLight="-16777216" backgroundLight="0">Green: Voluntary migrant
 Red: Involuntary non-migrant
 Cyan: Voluntary non-migrant
 Yellow: Acquiescent non-migrant
 Orange: Distressed/Forced migrant</note>
+    <note x="724" y="182" backgroundDark="0" fontSize="12" width="33" markdown="false" height="252" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">H
+i
+g
+h
+
+A
+s
+p
+i
+r
+a
+t
+i
+o
+n</note>
+    <note x="235" y="182" backgroundDark="0" fontSize="12" width="33" markdown="false" height="252" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">L
+o
+w
+
+A
+s
+p
+i
+r
+a
+t
+i
+o
+n</note>
   </widgets>
   <info><![CDATA[## WHAT IS IT?
 
