@@ -10,6 +10,7 @@ globals [
   flow-to-migrant   ;; Count agents becoming Voluntary Migrants
   total-migrations  ;; Total migrated
   previous-total-migrants ;; tracker of previous migrants
+  mobility-zone-exits ;; count exists out of the mobility zone (total-aspiration <=5 or total-ability <=5)
 ]
 
 turtles-own [
@@ -38,6 +39,7 @@ turtles-own [
   previous-status    ; The actual current state
   migration-status  ; "voluntary-migrant", "acquiescent-migrant", "involuntary-non-migrant", "voluntary-non-migrant", "distressed-migrant"
   already-counted-migrated-friends
+  previous-peer-balance
   
 ]
 
@@ -49,10 +51,10 @@ to setup
   random-seed global-seed
   clear-all
   set previous-total-migrants 0
-  set previous-total-migrants 0
   set flow-to-trapped 0
   set flow-to-migrant 0
   set total-migrations 0
+  set mobility-zone-exits 0
   setup-patches
   setup-turtles
   set previous-total-migrants count turtles with [
@@ -99,6 +101,7 @@ to setup-turtles
     setxy random-xcor random-ycor
     set ability-growth-potential (random-float 1.5 + 0.5) 
     set already-counted-migrated-friends 0
+    set previous-peer-balance 0
     set previous-status "none"
     
     ;; Set the previous global count for diaspora tracking
@@ -137,6 +140,7 @@ to setup-turtles
   ]
   ;; Reset migration flow/total counters after initial status assignment
   set total-migrations 0
+  set mobility-zone-exits 0
   set flow-to-trapped 0
   set flow-to-migrant 0
 end
@@ -147,7 +151,7 @@ end
 
 to go
   
-  update-aspiration-socially
+  update-asp-social
   increase-ability
     
   ask turtles [
@@ -201,14 +205,26 @@ to determine-status
  
 ;; State transitions and flow/cumulative updates
   if previous-status != migration-status [
-    if migration-status = "involuntary-non-migrant" [ 
-      set flow-to-trapped flow-to-trapped + 1 
-    ]
-    if member? migration-status ["voluntary-migrant" "distressed-migrant"] 
-       and not member? previous-status ["voluntary-migrant" "distressed-migrant"] [
+    
+    let is-now-migrant? member? migration-status ["voluntary-migrant" "distressed-migrant"] 
+    let was-migrant? member? previous-status ["voluntary-migrant" "distressed-migrant"] 
+    
+    ; ENTRY: Agent enters mobility zone 
+    if is-now-migrant? and not was-migrant? [
       set flow-to-migrant flow-to-migrant + 1
-      set total-migrations total-migrations + 1 ;; Increment cumulative migration counter
+      set total-migrations total-migrations + 1
     ]
+    ; EXIT: Agent exits from mobiity zone
+    if was-migrant? and not is-now-migrant? [
+      set mobility-zone-exits mobility-zone-exits + 1
+      if migration-status = "involuntary-non-migrant" [
+        set flow-to-trapped flow-to-trapped + 1
+      ]
+    ]
+   
+    ;DSR Code to find agent who changed status
+    if member? previous-status ["voluntary-migrant" "distressed-migrant"] [type "tick " type ticks type " who " type who type " " type previous-status type " becomes " print migration-status]
+ 
     set previous-status migration-status
   ]
 
@@ -252,8 +268,8 @@ end
 ;; ASPIRATION & ABILITY DYNAMICS
 ;; ==========================================================
 
-to update-aspiration-socially
-  ;; 1. Calculate the macro-level impact (Global Diaspora Signal)
+to update-asp-social
+  ;;Calculate the macro-level impact (Global Diaspora Signal)
   
   let total-pop count turtles
   let current-migrants count turtles with [migration-status = "voluntary-migrant" or migration-status = "distressed-migrant"]
@@ -264,7 +280,7 @@ to update-aspiration-socially
   ;; Only apply global diaspora pull if NEW migrations occurred in this tick
   if new-global-migrants > 0 and total-pop > 0 [
     let new-diaspora-signal (new-global-migrants / total-pop)
-    set diaspora-pull (new-diaspora-signal * 0.1)
+    set diaspora-pull (new-diaspora-signal * diaspora-signal)
   ]
   
   set previous-total-migrants current-migrants
@@ -286,25 +302,33 @@ to update-aspiration-socially
       set already-counted-migrated-friends current-migrated-friends
     ]
     
+    ;; Peer pressure: seeing if friends have high vs low total aspirations
+    let peer-pressure 0
 
     ifelse any? my-network [
-      ;; Peer pressure: seeing if friends have high vs low total aspirations
       let peer-weight (network-strength * 0.05) 
       let positive-influence count my-network with [asp-social >= 5]
       let negative-influence count my-network with [asp-social < 5]
       
-      let peer-pressure ((positive-influence - negative-influence) * peer-weight)
+      let current-peer-balance (positive-influence - negative-influence)
+      let delta-peer-balance (current-peer-balance - previous-peer-balance)
+      ;; Apply peer pressure only when there is a net change
+      if delta-peer-balance != 0 [
+        set peer-pressure (delta-peer-balance * peer-weight)
+        set previous-peer-balance current-peer-balance
+      ]
            
       ;; Combine local peer pressure, the global signal, and the specific network boost
       let total-change peer-pressure + diaspora-pull + net-boost
       set next-asp-social (asp-social + total-change)
     ] 
     [
-      ;; If isolated, only the global signal influences them
+      ;; If isolated, reset balance tracker and only apply the global diaspora signal influences
+      set previous-peer-balance 0
       set next-asp-social (asp-social + diaspora-pull)
     ]
 
-    ;; 2. Bound values between 1 and 10
+    ;; Bound values between 1 and 10
     set next-asp-social median (list 1 next-asp-social 10)
     set asp-social next-asp-social
   ]
@@ -417,6 +441,10 @@ to-report mean-aspiration-ability-gap
   ]
 end
 
+to-report cumulative-exits
+  report mobility-zone-exits
+end
+
 
 
 
@@ -428,13 +456,13 @@ end
       <update></update>
       <pen interval="1.0" mode="0" display="Mean Aspiration" color="-5825686" legend="true">
         <setup></setup>
-        <update>plot mean [total-ability] of turtles</update>
+        <update>plot mean [total-aspiration] of turtles</update>
       </pen>
       <pen interval="1.0" mode="0" display="Mean Ability" color="-13345367" legend="true">
         <setup></setup>
-        <update>plot mean-ability-level</update>
+        <update>plot mean [total-ability] of turtles</update>
       </pen>
-      <pen interval="1.0" mode="0" display="Gap" color="-1513240" legend="true">
+      <pen interval="1.0" mode="0" display="Gap" color="-14477296" legend="true">
         <setup></setup>
         <update>plot mean-aspiration-ability-gap</update>
       </pen>
@@ -520,17 +548,7 @@ plot-pen-up</update>
       <choice type="string" value="High"></choice>
       <choice type="string" value="Low"></choice>
     </chooser>
-    <monitor x="2" precision="17" y="239" height="61" fontSize="11" width="106">total-migrations</monitor>
-    <monitor x="116" precision="17" y="239" height="60" fontSize="11" width="100" display="Vol non-migrant">count turtles with [color = cyan]</monitor>
-    <monitor x="112" precision="17" y="311" height="60" fontSize="11" width="100" display="Invol non-migrant">count turtles with [color = red]</monitor>
-    <monitor x="2" precision="17" y="378" height="60" fontSize="11" width="100" display="Acquiescent Migrant">count turtles with [color = yellow]</monitor>
-    <monitor x="110" precision="17" y="378" height="60" fontSize="11" width="100" display="Forced migrant">count turtles with [color = orange]</monitor>
-    <monitor x="2" precision="2" y="446" height="60" fontSize="11" width="100" display="Total ability">mean [total-ability] of turtles</monitor>
-    <monitor x="112" precision="2" y="446" height="60" fontSize="11" width="100" display="abil-human">mean [abil-human] of turtles</monitor>
-    <monitor x="2" precision="2" y="514" height="60" fontSize="11" width="100" display="Total aspiration">mean [total-aspiration] of turtles</monitor>
-    <monitor x="114" precision="2" y="514" height="60" fontSize="11" width="100" display="asp-social">mean [asp-social] of turtles</monitor>
     <note x="247" y="496" backgroundDark="0" fontSize="12" width="143" markdown="false" height="18" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">EXTERNAL SHOCK</note>
-    <monitor x="2" precision="17" y="311" height="60" fontSize="11" width="100" display="Vol Migrant">count turtles with [color = green]</monitor>
     <note x="407" y="532" backgroundDark="0" fontSize="12" width="260" markdown="false" height="20" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Migration as Cognitive Gap (Teinfalt, 2026)</note>
     <switch x="167" y="174" height="40" on="true" variable="show-links" width="69" display="show-links"></switch>
     <note x="444" y="482" backgroundDark="0" fontSize="12" width="127" markdown="false" height="28" textColorDark="-1" textColorLight="-16777216" backgroundLight="0">Low Ability</note>
@@ -569,6 +587,18 @@ t
 i
 o
 n</note>
+    <monitor x="2" precision="17" y="239" height="61" fontSize="11" width="106" display="mobility-entry">total-migrations</monitor>
+    <monitor x="252" precision="2" y="560" height="60" fontSize="11" width="100" display="Total aspiration">mean [total-aspiration] of turtles</monitor>
+    <monitor x="357" precision="2" y="559" height="60" fontSize="11" width="100" display="Total ability">mean [total-ability] of turtles</monitor>
+    <monitor x="462" precision="2" y="561" height="60" fontSize="11" width="100" display="asp-social">mean [asp-social] of turtles</monitor>
+    <monitor x="565" precision="2" y="560" height="60" fontSize="11" width="100" display="abil-human">mean [abil-human] of turtles</monitor>
+    <monitor x="2" precision="17" y="372" height="60" fontSize="11" width="100" display="Vol non-migrant">count turtles with [color = cyan]</monitor>
+    <monitor x="2" precision="17" y="436" height="60" fontSize="11" width="100" display="Acquiescent Migrant">count turtles with [color = yellow]</monitor>
+    <monitor x="2" precision="17" y="307" height="60" fontSize="11" width="100" display="Vol Migrant">count turtles with [color = green]</monitor>
+    <monitor x="108" precision="17" y="308" height="60" fontSize="11" width="100" display="Forced migrant">count turtles with [color = orange]</monitor>
+    <monitor x="108" precision="17" y="374" height="60" fontSize="11" width="100" display="Invol non-migrant">count turtles with [color = red]</monitor>
+    <monitor x="115" precision="17" y="238" height="61" fontSize="11" width="106" display="mobility-exit">mobility-zone-exits</monitor>
+    <slider x="3" step="0.1" y="501" max="1" width="150" display="diaspora-signal" height="50" min="0" direction="Horizontal" default="0.1" variable="diaspora-signal"></slider>
   </widgets>
   <info><![CDATA[## WHAT IS IT?
 
