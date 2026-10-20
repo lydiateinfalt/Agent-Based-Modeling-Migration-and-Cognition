@@ -3,7 +3,7 @@
   <code><![CDATA[;; ==========================================================
 ;; MIGRATION AS COGNITIVE GAP (Carling & Schewel, 2018)
 ;; ==========================================================
-;; Lydia Teinfalt for CSS 635   Last Updated: 10/01/2026
+;; Lydia Teinfalt for CSS 635   Last Updated: 10/19/2026
 
 globals [
   flow-to-trapped   ;; Count agents becoming Involuntary Non-Migrants
@@ -11,6 +11,10 @@ globals [
   total-migrations  ;; Total migrated
   previous-total-migrants ;; tracker of previous migrants
   mobility-zone-exits ;; count exists out of the mobility zone (total-aspiration <=5 or total-ability <=5)
+  unique-new-migrants ;; agents entering mobility zone after setup
+  cumulative-net-boost ;; cumulative asp-social added by "newly migrated" boost
+  cumulative-peer-pressure ;; cumulative asp-social change from peer pressure
+  cumulative-diaspora-pull ;; cumulative asp-social added by the global diaspora pull
 ]
 
 turtles-own [
@@ -40,6 +44,7 @@ turtles-own [
   migration-status  ; "voluntary-migrant", "acquiescent-migrant", "involuntary-non-migrant", "voluntary-non-migrant", "distressed-migrant"
   already-counted-migrated-friends
   previous-peer-balance
+  ever-migrated? ;; true when agent crosses into mobility zone. Any agents initialized there are automatically true
   
 ]
 
@@ -55,11 +60,15 @@ to setup
   set flow-to-migrant 0
   set total-migrations 0
   set mobility-zone-exits 0
+  set unique-new-migrants 0
+  set cumulative-net-boost 0
+  set cumulative-peer-pressure 0
+  set cumulative-diaspora-pull 0
   setup-patches
   setup-turtles
-  set previous-total-migrants count turtles with [
-    member? migration-status ["voluntary-migrant" "distressed-migrant"]
-  ]
+;   set previous-total-migrants count turtles with [
+;     member? migration-status ["voluntary-migrant" "distressed-migrant"]
+;   ]
   reset-ticks
 end
 
@@ -103,13 +112,14 @@ to setup-turtles
     set already-counted-migrated-friends 0
     set previous-peer-balance 0
     set previous-status "none"
+    set ever-migrated? false
     
     ;; Set the previous global count for diaspora tracking
-    set previous-total-migrants count turtles with [member? migration-status ["voluntary-migrant" "distressed-migrant"]]
+    ;;set previous-total-migrants count turtles with [member? migration-status ["voluntary-migrant" "distressed-migrant"]]
     
     ;; Initialize Aspirations
     set asp-social (asp-min + random-float (asp-max - asp-min))
-    set next-asp-social (asp-min + random-float (asp-max - asp-min))
+    ;set next-asp-social (asp-min + random-float (asp-max - asp-min))
     set asp-safety (asp-min + random-float (asp-max - asp-min))
     set asp-quality (asp-min + random-float (asp-max - asp-min))
     set asp-economic (asp-min + random-float (asp-max - asp-min))
@@ -123,26 +133,32 @@ to setup-turtles
     set abil-social (abil-min + random-float (abil-max - abil-min))
     ;set abil-info (abil-min + random-float (abil-max - abil-min))
     set abil-family (abil-min + random-float (abil-max - abil-min))
-    
-    ;; Only link to turtles within 3 patches
-    let network-friends other turtles in-radius 1.5
-    if any? network-friends [
-      ;; Create a link with only 2 or less nearby turtles
-      create-links-with n-of (min list 2 count network-friends) network-friends [
-        set color grey
-      ]
-    ]
+  
     
     recalculate-metrics
     determine-status
     set previous-status migration-status
+  ]
+  ask turtles [
+    let candidates other turtles in-radius 1.5 with [ not link-neighbor? myself 
+    ]
+    if any? candidates [
+      create-links-with n-of (min list max-links count candidates) candidates [
+        set color grey
+      ]
+    ]
+  ]
+  ask turtles [
+    set already-counted-migrated-friends count link-neighbors with [ ever-migrated?]
     update-agent-position
   ]
+        
   ;; Reset migration flow/total counters after initial status assignment
   set total-migrations 0
   set mobility-zone-exits 0
   set flow-to-trapped 0
   set flow-to-migrant 0
+  set unique-new-migrants 0
 end
 
 ;; ==========================================================
@@ -213,6 +229,10 @@ to determine-status
     if is-now-migrant? and not was-migrant? [
       set flow-to-migrant flow-to-migrant + 1
       set total-migrations total-migrations + 1
+      if not ever-migrated? [
+        set ever-migrated? true
+        set unique-new-migrants unique-new-migrants + 1
+      ]
     ]
     ; EXIT: Agent exits from mobiity zone
     if was-migrant? and not is-now-migrant? [
@@ -223,7 +243,7 @@ to determine-status
     ]
    
     ;DSR Code to find agent who changed status
-    if member? previous-status ["voluntary-migrant" "distressed-migrant"] [type "tick " type ticks type " who " type who type " " type previous-status type " becomes " print migration-status]
+    ;;if member? previous-status ["voluntary-migrant" "distressed-migrant"] [type "tick " type ticks type " who " type who type " " type previous-status type " becomes " print migration-status]
  
     set previous-status migration-status
   ]
@@ -231,17 +251,14 @@ to determine-status
 end
 
 to recalculate-metrics
-  let internal-aspirations (list asp-quality asp-economic asp-family asp-adventure asp-social)
-  let all-aspirations (list asp-quality asp-economic asp-family asp-adventure asp-social asp-safety)
-  
-  ifelse asp-safety >= 5 [
-  set total-aspiration (0.6 * asp-safety) + (0.4 * mean(internal-aspirations)) ] [  set total-aspiration mean(all-aspirations)]
-  
-  ;; Compensatory ability dynamics
+  let internal-asp-mean mean (list asp-quality asp-economic asp-family asp-adventure)
+  let blended (0.7 * internal-asp-mean) + (0.3 * asp-social)
+  set total-aspiration max (list asp-safety blended)
   set total-ability mean(list abil-financial abil-legal abil-human abil-social abil-family)
   
 end
 
+; jigger the position
 to migrate
   ;; Agents jitter slightly to look alive, but stay in their conceptual area
   let scale-x ((max-pxcor - 0.5) / 5)
@@ -272,28 +289,21 @@ to update-asp-social
   ;;Calculate the macro-level impact (Global Diaspora Signal)
   
   let total-pop count turtles
-  let current-migrants count turtles with [migration-status = "voluntary-migrant" or migration-status = "distressed-migrant"]
-  
-  let new-global-migrants (current-migrants - previous-total-migrants)
-  let diaspora-pull 0
-  
-  ;; Only apply global diaspora pull if NEW migrations occurred in this tick
-  if new-global-migrants > 0 and total-pop > 0 [
-    let new-diaspora-signal (new-global-migrants / total-pop)
-    set diaspora-pull (new-diaspora-signal * diaspora-signal)
+  let diaspora-share 0
+  if total-pop > 0 [
+    set diaspora-share (count turtles with [ever-migrated?] / total-pop)
   ]
+  let diaspora-pull (diaspora-signal * diaspora-share / 1000)
+
   
-  set previous-total-migrants current-migrants
+  ;;set previous-total-migrants current-migrants
   
   ask turtles [
-    ;; global diaspora influence
-    ;let diaspora-pull (diaspora-signal * 0.1)
+
     
     ;; Meso networks
     let my-network link-neighbors 
-    let current-migrated-friends count my-network with [migration-status = "voluntary-migrant" or migration-status = "distressed-migrant"]
-    
-    ; Event driven trigger for network boost
+    let current-migrated-friends count my-network with [ever-migrated?]
     let newly-migrated-friends (current-migrated-friends - already-counted-migrated-friends)
     let net-boost 0
     
@@ -327,9 +337,14 @@ to update-asp-social
       set previous-peer-balance 0
       set next-asp-social (asp-social + diaspora-pull)
     ]
+    
+    ;; Reports for the three modes of social influence
+    set cumulative-net-boost cumulative-net-boost + net-boost
+    set cumulative-peer-pressure cumulative-peer-pressure + peer-pressure
+    set cumulative-diaspora-pull cumulative-diaspora-pull + diaspora-pull
 
-    ;; Bound values between 1 and 10
-    set next-asp-social median (list 1 next-asp-social 10)
+    ;; Bound values between 0 and 10
+    set next-asp-social median (list 0 next-asp-social 10)
     set asp-social next-asp-social
   ]
 end
@@ -342,11 +357,6 @@ to increase-ability
     ;; and financial capital (savings)
     let random-luck random-float 0.01
     set abil-human (abil-human + 0.004)
-    ;set abil-financial (abil-financial + (random-luck * ability-growth-potential))
-    ;ifelse migration-status = "involuntary-non-migrant" or migration-status = "acquiescent-non-migrant" or migration-status = "distressed-migrant"[
-      ;; Involuntary mobile povery trap
-    ;  set abil-financial (abil-financial - 0.005)] 
-    ;[set abil-financial (abil-financial + 0.005)]
     
     ;; Conditional financial dynamics
     ifelse member? migration-status ["involuntary-non-migrant" "acquiescent-non-migrant" "distressed-migrant"] [
@@ -402,8 +412,8 @@ end
 ;; ==========================================================
 
 
-;; Reporter 2: Global Diaspora Signal (Proportion of population that migrated)
-to-report diaspora-signal-reporter
+;; Share of agents currently in the mobile viable zone
+to-report mobility-zone-share
   let total-pop count turtles
   ifelse total-pop > 0 [
     report (count turtles with [migration-status = "voluntary-migrant" or migration-status = "distressed-migrant"] / total-pop)
@@ -412,7 +422,8 @@ to-report diaspora-signal-reporter
   ]
 end
 
-;; Reporter 3: Cumulative Total Migrations (For S-Curve / Contagion plot)
+
+;; 
 to-report cumulative-migrations
   report total-migrations
 end
@@ -445,6 +456,38 @@ to-report cumulative-exits
   report mobility-zone-exits
 end
 
+;; Agents first time entering mobility zone
+to-report unique-migrants
+  report unique-new-migrants
+end
+
+to-report ever-in-zone-share
+  ifelse any? turtles [
+    report count turtles with [ever-migrated?] / count turtles
+  ] [
+    report 0
+  ]
+end
+
+to-report mean-asp-social
+  ifelse any? turtles [
+    report mean [asp-social] of turtles
+  ] [
+    report 0
+  ]
+end
+
+to-report share-high-ability
+  ifelse any? turtles [
+    report count turtles with [total-ability > 5] / count turtles
+  ] [
+    report 0
+  ]
+end
+
+
+
+
 
 
 
@@ -476,9 +519,13 @@ end
         <setup></setup>
         <update>plot mean-aspiration-level</update>
       </pen>
-      <pen interval="1.0" mode="0" display="Diaspora Signal" color="-13345367" legend="true">
+      <pen interval="1.0" mode="0" display="Ever in Zone Share" color="-13345367" legend="true">
         <setup></setup>
-        <update>plot (diaspora-signal-reporter * 10)</update>
+        <update>plot (ever-in-zone-share * 10)</update>
+      </pen>
+      <pen interval="1.0" mode="0" display="Mobility Zone Share" color="-955883" legend="true">
+        <setup></setup>
+        <update>plot mobility-zone-share</update>
       </pen>
     </plot>
     <plot x="756" autoPlotX="true" yMax="10.0" autoPlotY="true" y="5" xMin="0.0" height="187" legend="false" xMax="10000.0" yMin="0.0" width="235" xAxis="ticks" display="Cumulative Migration Flow">
@@ -598,7 +645,8 @@ n</note>
     <monitor x="108" precision="17" y="308" height="60" fontSize="11" width="100" display="Forced migrant">count turtles with [color = orange]</monitor>
     <monitor x="108" precision="17" y="374" height="60" fontSize="11" width="100" display="Invol non-migrant">count turtles with [color = red]</monitor>
     <monitor x="115" precision="17" y="238" height="61" fontSize="11" width="106" display="mobility-exit">mobility-zone-exits</monitor>
-    <slider x="3" step="0.1" y="501" max="1" width="150" display="diaspora-signal" height="50" min="0" direction="Horizontal" default="0.1" variable="diaspora-signal"></slider>
+    <slider x="0" step="1" y="560" max="10" width="150" display="max-links" height="50" min="1" direction="Horizontal" default="2.0" variable="max-links"></slider>
+    <slider x="3" step="0.25" y="501" max="2" width="150" display="diaspora-signal" height="50" min="0" direction="Horizontal" default="0.0" variable="diaspora-signal"></slider>
   </widgets>
   <info><![CDATA[## WHAT IS IT?
 
@@ -1664,6 +1712,100 @@ Aspiration represents the desire to migrate
           <value value="3939"></value>
           <value value="57491"></value>
           <value value="59402"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+    <experiment name="Social Contagion Experiment" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
+      <setup>setup</setup>
+      <go>repeat 10 [go]</go>
+      <metrics>
+        <metric>cumulative-migrations</metric>
+        <metric>unique-migrants</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>diaspora-signal-reporter</metric>
+        <metric>mean [asp-social] of turtles</metric>
+        <metric>mean-asp-social</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>share-high-ability</metric>
+        <metric>cumulative-net-boost</metric>
+        <metric>cumulative-peer-pressure</metric>
+        <metric>cumulative-diaspora-pull</metric>
+        <metric>cumulative-exits</metric>
+        <metric>flow-to-migrant</metric>
+        <metric>flow-to-trapped</metric>
+        <metric>ticks</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0"></value>
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="true"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <steppedValueSet variable="global-seed" first="1" step="1" last="30"></steppedValueSet>
+        <enumeratedValueSet variable="diaspora-signal">
+          <value value="0"></value>
+          <value value="0.1"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+    <experiment name="Diaspora Sweep" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
+      <setup>setup</setup>
+      <go>repeat 10 [go]</go>
+      <metrics>
+        <metric>ticks</metric>
+        <metric>cumulative-migrations</metric>
+        <metric>unique-migrants</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>mobility-zone-share</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>mean-asp-social</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>share-high-ability</metric>
+        <metric>cumulative-net-boost</metric>
+        <metric>cumulative-peer-pressure</metric>
+        <metric>cumulative-diaspora-pull</metric>
+        <metric>cumulative-exits</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0"></value>
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="false"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="max-links">
+          <value value="2"></value>
+        </enumeratedValueSet>
+        <steppedValueSet variable="global-seed" first="1" step="1" last="30"></steppedValueSet>
+        <enumeratedValueSet variable="diaspora-signal">
+          <value value="0"></value>
+          <value value="0.25"></value>
+          <value value="0.5"></value>
+          <value value="1"></value>
+          <value value="2"></value>
         </enumeratedValueSet>
       </constants>
     </experiment>
