@@ -1,0 +1,48 @@
+
+<experiments>
+  <experiment name="Social Contagion Experiment" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
+    <setup>setup</setup>
+    <go>repeat 10 [go]</go>
+    <metrics>
+      <metric>cumulative-migrations</metric>
+      <metric>unique-migrants</metric>
+      <metric>ever-in-zone-share</metric>
+      <metric>diaspora-signal-reporter</metric>
+      <metric>mean [asp-social] of turtles</metric>
+      <metric>mean-asp-social</metric>
+      <metric>mean-aspiration-level</metric>
+      <metric>mean-ability-level</metric>
+      <metric>share-high-ability</metric>
+      <metric>cumulative-net-boost</metric>
+      <metric>cumulative-peer-pressure</metric>
+      <metric>cumulative-diaspora-pull</metric>
+      <metric>cumulative-exits</metric>
+      <metric>flow-to-migrant</metric>
+      <metric>flow-to-trapped</metric>
+      <metric>ticks</metric>
+    </metrics>
+    <constants>
+      <enumeratedValueSet variable="initial-ability-level">
+        <value value="&quot;All&quot;"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="network-strength">
+        <value value="0"></value>
+        <value value="0.4"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="num-turtles">
+        <value value="200"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="show-links">
+        <value value="true"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="initial-aspiration-level">
+        <value value="&quot;All&quot;"></value>
+      </enumeratedValueSet>
+      <steppedValueSet variable="global-seed" first="1" step="1" last="30"></steppedValueSet>
+      <enumeratedValueSet variable="diaspora-signal">
+        <value value="0"></value>
+        <value value="0.1"></value>
+      </enumeratedValueSet>
+    </constants>
+  </experiment>
+</experiments>

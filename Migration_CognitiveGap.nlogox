@@ -3,7 +3,7 @@
   <code><![CDATA[;; ==========================================================
 ;; MIGRATION AS COGNITIVE GAP (Carling & Schewel, 2018)
 ;; ==========================================================
-;; Lydia Teinfalt for CSS 635   Last Updated: 10/19/2026
+;; Lydia Teinfalt for CSS 635   Last Updated: 11/11/2026
 
 globals [
   flow-to-trapped   ;; Count agents becoming Involuntary Non-Migrants
@@ -1592,7 +1592,7 @@ Aspiration represents the desire to migrate
   </linkShapes>
   <previewCommands>setup repeat 75 [ go ]</previewCommands>
   <experiments>
-    <experiment name="Experiment 3" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
+    <experiment name="Experiment 3a Poverty Trap" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
       <setup>setup</setup>
       <go>repeat 10 [ go ]</go>
       <metrics>
@@ -1619,13 +1619,21 @@ Aspiration represents the desire to migrate
         <metric>count turtles with [color = yellow]</metric>
         <metric>count turtles with [color = red]</metric>
         <metric>count turtles with [color = orange]</metric>
+        <metric>standard-deviation [abil-financial] of turtles</metric>
+        <metric>standard-deviation [total-ability] of turtles</metric>
+        <metric><![CDATA[count turtles with [abil-financial <= 0]]]></metric>
+        <metric><![CDATA[count turtles with [abil-financial > 5]]]></metric>
+        <metric>count turtles with [not ever-migrated?]</metric>
+        <metric>count turtles with [ever-migrated? and (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>count turtles with [ever-migrated? and not (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>ifelse-value any? turtles with [ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [ever-migrated?] ] [ 0 ]</metric>
+        <metric>ifelse-value any? turtles with [not ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [not ever-migrated?] ] [ 0 ]</metric>
       </metrics>
       <constants>
         <enumeratedValueSet variable="initial-ability-level">
           <value value="&quot;Low&quot;"></value>
         </enumeratedValueSet>
         <enumeratedValueSet variable="network-strength">
-          <value value="0"></value>
           <value value="0.4"></value>
         </enumeratedValueSet>
         <enumeratedValueSet variable="num-turtles">
@@ -1640,17 +1648,13 @@ Aspiration represents the desire to migrate
         <enumeratedValueSet variable="max-links">
           <value value="2"></value>
         </enumeratedValueSet>
-        <steppedValueSet variable="global-seed" first="1" step="1" last="30"></steppedValueSet>
+        <steppedValueSet variable="global-seed" first="1" step="1" last="100"></steppedValueSet>
         <enumeratedValueSet variable="diaspora-signal">
           <value value="0"></value>
-          <value value="0.25"></value>
-          <value value="0.5"></value>
-          <value value="1"></value>
-          <value value="2"></value>
         </enumeratedValueSet>
       </constants>
     </experiment>
-    <experiment name="Experiment 2: External Shock" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
+    <experiment name="Experiment 2: External Shock (Paper)" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
       <setup>setup</setup>
       <go>repeat 10 [ go  if ticks = 794 [ apply-economic-shock ] ]</go>
       <metrics>
@@ -1706,94 +1710,7 @@ Aspiration represents the desire to migrate
         </enumeratedValueSet>
       </constants>
     </experiment>
-    <experiment name="Experiment 1" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="1584">
-      <setup>setup</setup>
-      <go>go</go>
-      <metrics>
-        <metric>count turtles</metric>
-        <metric>count turtles with [color = cyan]</metric>
-        <metric>count turtles with [color = green]</metric>
-        <metric>count turtles with [color = yellow]</metric>
-        <metric>count turtles with [color = red]</metric>
-        <metric>count turtles with [color = orange]</metric>
-        <metric>mean-aspiration-level</metric>
-        <metric>mean-ability-level</metric>
-        <metric>mean-aspiration-ability-gap</metric>
-        <metric>cumulative-migrations</metric>
-      </metrics>
-      <constants>
-        <enumeratedValueSet variable="initial-ability-level">
-          <value value="&quot;All&quot;"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="network-strength">
-          <value value="0.4"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="num-turtles">
-          <value value="200"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="show-links">
-          <value value="true"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="initial-aspiration-level">
-          <value value="&quot;All&quot;"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="global-seed">
-          <value value="42"></value>
-          <value value="108"></value>
-          <value value="777"></value>
-          <value value="9380"></value>
-          <value value="3939"></value>
-          <value value="57491"></value>
-          <value value="59402"></value>
-        </enumeratedValueSet>
-      </constants>
-    </experiment>
-    <experiment name="Social Contagion Experiment" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
-      <setup>setup</setup>
-      <go>repeat 10 [go]</go>
-      <metrics>
-        <metric>cumulative-migrations</metric>
-        <metric>unique-migrants</metric>
-        <metric>ever-in-zone-share</metric>
-        <metric>diaspora-signal-reporter</metric>
-        <metric>mean [asp-social] of turtles</metric>
-        <metric>mean-asp-social</metric>
-        <metric>mean-aspiration-level</metric>
-        <metric>mean-ability-level</metric>
-        <metric>share-high-ability</metric>
-        <metric>cumulative-net-boost</metric>
-        <metric>cumulative-peer-pressure</metric>
-        <metric>cumulative-diaspora-pull</metric>
-        <metric>cumulative-exits</metric>
-        <metric>flow-to-migrant</metric>
-        <metric>flow-to-trapped</metric>
-        <metric>ticks</metric>
-      </metrics>
-      <constants>
-        <enumeratedValueSet variable="initial-ability-level">
-          <value value="&quot;All&quot;"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="network-strength">
-          <value value="0"></value>
-          <value value="0.4"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="num-turtles">
-          <value value="200"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="show-links">
-          <value value="true"></value>
-        </enumeratedValueSet>
-        <enumeratedValueSet variable="initial-aspiration-level">
-          <value value="&quot;All&quot;"></value>
-        </enumeratedValueSet>
-        <steppedValueSet variable="global-seed" first="1" step="1" last="30"></steppedValueSet>
-        <enumeratedValueSet variable="diaspora-signal">
-          <value value="0"></value>
-          <value value="0.1"></value>
-        </enumeratedValueSet>
-      </constants>
-    </experiment>
-    <experiment name="Experiment 1: Diaspora Signal" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
+    <experiment name="Experiment 1: Diaspora Signal (Paper)" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="600">
       <setup>setup</setup>
       <go>repeat 10 [go]</go>
       <metrics>
@@ -1844,6 +1761,200 @@ Aspiration represents the desire to migrate
           <value value="0.5"></value>
           <value value="1"></value>
           <value value="2"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+    <experiment name="Experiment 3b Poverty Trap (All)" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="false" timeLimit="600">
+      <setup>setup</setup>
+      <go>repeat 10 [ go ]</go>
+      <runMetricsCondition>member? ticks [0 1000 3000 6000]</runMetricsCondition>
+      <metrics>
+        <metric>ticks</metric>
+        <metric>cumulative-migrations</metric>
+        <metric>unique-migrants</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>mobility-zone-share</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>mean-asp-social</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>share-high-ability</metric>
+        <metric>cumulative-net-boost</metric>
+        <metric>cumulative-peer-pressure</metric>
+        <metric>cumulative-diaspora-pull</metric>
+        <metric>cumulative-exits</metric>
+        <metric>ifelse-value any? turtles with [color = orange] [ mean [abil-financial] of turtles with [color = orange] ] [ 0 ]</metric>
+        <metric>mean [asp-economic] of turtles</metric>
+        <metric>mean [abil-financial] of turtles</metric>
+        <metric>mean [abil-human] of turtles</metric>
+        <metric>count turtles with [color = cyan]</metric>
+        <metric>count turtles with [color = green]</metric>
+        <metric>count turtles with [color = yellow]</metric>
+        <metric>count turtles with [color = red]</metric>
+        <metric>count turtles with [color = orange]</metric>
+        <metric>standard-deviation [abil-financial] of turtles</metric>
+        <metric>standard-deviation [total-ability] of turtles</metric>
+        <metric><![CDATA[count turtles with [abil-financial <= 0]]]></metric>
+        <metric><![CDATA[count turtles with [abil-financial > 5]]]></metric>
+        <metric>count turtles with [not ever-migrated?]</metric>
+        <metric>count turtles with [ever-migrated? and (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>count turtles with [ever-migrated? and not (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>ifelse-value any? turtles with [ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [ever-migrated?] ] [ 0 ]</metric>
+        <metric>ifelse-value any? turtles with [not ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [not ever-migrated?] ] [ 0 ]</metric>
+        <metric>ticks</metric>
+        <metric>[ (list who total-aspiration total-ability abil-financial abil-human migration-status ever-migrated? count link-neighbors) ] of turtles</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="false"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;All&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="max-links">
+          <value value="2"></value>
+        </enumeratedValueSet>
+        <steppedValueSet variable="global-seed" first="1" step="1" last="100"></steppedValueSet>
+        <enumeratedValueSet variable="diaspora-signal">
+          <value value="0"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+    <experiment name="Experiment 3c Poverty Trap High Low" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="false" timeLimit="600">
+      <setup>setup</setup>
+      <go>repeat 10 [ go ]</go>
+      <runMetricsCondition>member? ticks [0 1000 3000 6000]</runMetricsCondition>
+      <metrics>
+        <metric>ticks</metric>
+        <metric>cumulative-migrations</metric>
+        <metric>unique-migrants</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>mobility-zone-share</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>mean-asp-social</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>share-high-ability</metric>
+        <metric>cumulative-net-boost</metric>
+        <metric>cumulative-peer-pressure</metric>
+        <metric>cumulative-diaspora-pull</metric>
+        <metric>cumulative-exits</metric>
+        <metric>ifelse-value any? turtles with [color = orange] [ mean [abil-financial] of turtles with [color = orange] ] [ 0 ]</metric>
+        <metric>mean [asp-economic] of turtles</metric>
+        <metric>ability-growth-potential</metric>
+        <metric>mean [abil-financial] of turtles</metric>
+        <metric>mean [abil-human] of turtles</metric>
+        <metric>count turtles with [color = cyan]</metric>
+        <metric>count turtles with [color = green]</metric>
+        <metric>count turtles with [color = yellow]</metric>
+        <metric>count turtles with [color = red]</metric>
+        <metric>count turtles with [color = orange]</metric>
+        <metric>standard-deviation [abil-financial] of turtles</metric>
+        <metric>standard-deviation [total-ability] of turtles</metric>
+        <metric><![CDATA[count turtles with [abil-financial <= 0]]]></metric>
+        <metric><![CDATA[count turtles with [abil-financial > 5]]]></metric>
+        <metric>count turtles with [not ever-migrated?]</metric>
+        <metric>count turtles with [ever-migrated? and (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>count turtles with [ever-migrated? and not (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>ifelse-value any? turtles with [ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [ever-migrated?] ] [ 0 ]</metric>
+        <metric>ifelse-value any? turtles with [not ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [not ever-migrated?] ] [ 0 ]</metric>
+        <metric>ticks</metric>
+        <metric>[ (list who total-aspiration total-ability abil-financial abil-human migration-status ever-migrated? count link-neighbors) ] of turtles</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;Low&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="false"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;High&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="max-links">
+          <value value="2"></value>
+        </enumeratedValueSet>
+        <steppedValueSet variable="global-seed" first="1" step="1" last="100"></steppedValueSet>
+        <enumeratedValueSet variable="diaspora-signal">
+          <value value="0"></value>
+        </enumeratedValueSet>
+      </constants>
+    </experiment>
+    <experiment name="Experiment 3d Poverty Trap High Low Growth (Paper)" repetitions="1" sequentialRunOrder="false" runMetricsEveryStep="false" timeLimit="600">
+      <setup>setup</setup>
+      <go>repeat 10 [ go ]</go>
+      <runMetricsCondition>member? ticks [0 1000 3000 6000]</runMetricsCondition>
+      <metrics>
+        <metric>ticks</metric>
+        <metric>cumulative-migrations</metric>
+        <metric>unique-migrants</metric>
+        <metric>mobility-zone-share</metric>
+        <metric>ever-in-zone-share</metric>
+        <metric>mean-asp-social</metric>
+        <metric>mean-aspiration-level</metric>
+        <metric>mean-ability-level</metric>
+        <metric>share-high-ability</metric>
+        <metric>cumulative-net-boost</metric>
+        <metric>cumulative-peer-pressure</metric>
+        <metric>cumulative-diaspora-pull</metric>
+        <metric>cumulative-exits</metric>
+        <metric>ifelse-value any? turtles with [color = orange] [ mean [abil-financial] of turtles with [color = orange] ] [ 0 ]</metric>
+        <metric>mean [asp-economic] of turtles</metric>
+        <metric>mean [abil-financial] of turtles</metric>
+        <metric>mean [abil-human] of turtles</metric>
+        <metric>count turtles with [color = cyan]</metric>
+        <metric>count turtles with [color = green]</metric>
+        <metric>count turtles with [color = yellow]</metric>
+        <metric>count turtles with [color = red]</metric>
+        <metric>count turtles with [color = orange]</metric>
+        <metric>standard-deviation [abil-financial] of turtles</metric>
+        <metric>standard-deviation [total-ability] of turtles</metric>
+        <metric><![CDATA[count turtles with [abil-financial <= 0]]]></metric>
+        <metric><![CDATA[count turtles with [abil-financial > 5]]]></metric>
+        <metric>count turtles with [not ever-migrated?]</metric>
+        <metric>count turtles with [ever-migrated? and (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>count turtles with [ever-migrated? and not (migration-status = "voluntary-migrant" or migration-status = "distressed-migrant")]</metric>
+        <metric>ifelse-value any? turtles with [ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [ever-migrated?] ] [ 0 ]</metric>
+        <metric>ifelse-value any? turtles with [not ever-migrated?] [ mean [ count link-neighbors with [ever-migrated?] ] of turtles with [not ever-migrated?] ] [ 0 ]</metric>
+        <metric>[ (list who total-aspiration total-ability abil-financial abil-human migration-status ever-migrated? count link-neighbors ability-growth-potential) ] of turtles</metric>
+      </metrics>
+      <constants>
+        <enumeratedValueSet variable="initial-ability-level">
+          <value value="&quot;Low&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="network-strength">
+          <value value="0.4"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="num-turtles">
+          <value value="200"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="show-links">
+          <value value="false"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="initial-aspiration-level">
+          <value value="&quot;High&quot;"></value>
+        </enumeratedValueSet>
+        <enumeratedValueSet variable="max-links">
+          <value value="2"></value>
+        </enumeratedValueSet>
+        <steppedValueSet variable="global-seed" first="1" step="1" last="100"></steppedValueSet>
+        <enumeratedValueSet variable="diaspora-signal">
+          <value value="0"></value>
         </enumeratedValueSet>
       </constants>
     </experiment>

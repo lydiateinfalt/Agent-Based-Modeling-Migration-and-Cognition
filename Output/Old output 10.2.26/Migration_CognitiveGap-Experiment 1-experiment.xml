@@ -1,0 +1,45 @@
+
+<experiments>
+  <experiment name="Experiment 1" repetitions="1" sequentialRunOrder="true" runMetricsEveryStep="true" timeLimit="1584">
+    <setup>setup</setup>
+    <go>go</go>
+    <metrics>
+      <metric>count turtles</metric>
+      <metric>count turtles with [color = cyan]</metric>
+      <metric>count turtles with [color = green]</metric>
+      <metric>count turtles with [color = yellow]</metric>
+      <metric>count turtles with [color = red]</metric>
+      <metric>count turtles with [color = orange]</metric>
+      <metric>mean-aspiration-level</metric>
+      <metric>mean-ability-level</metric>
+      <metric>mean-aspiration-ability-gap</metric>
+      <metric>cumulative-migrations</metric>
+    </metrics>
+    <constants>
+      <enumeratedValueSet variable="initial-ability-level">
+        <value value="&quot;All&quot;"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="network-strength">
+        <value value="0.4"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="num-turtles">
+        <value value="200"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="show-links">
+        <value value="true"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="initial-aspiration-level">
+        <value value="&quot;All&quot;"></value>
+      </enumeratedValueSet>
+      <enumeratedValueSet variable="global-seed">
+        <value value="42"></value>
+        <value value="108"></value>
+        <value value="777"></value>
+        <value value="9380"></value>
+        <value value="3939"></value>
+        <value value="57491"></value>
+        <value value="59402"></value>
+      </enumeratedValueSet>
+    </constants>
+  </experiment>
+</experiments>
